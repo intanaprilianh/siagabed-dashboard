@@ -1,0 +1,2025 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>SiagaBed Nurse Station</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Prototype Alpha SiagaBed: dasbor nurse station yang menjalankan alur sinyal pad induksi magnetik, ambang kondisi kritis, dan aktivasi Code Blue.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: dua zona. Panel gelap kiri (navigasi, jadwal jaga, antrean pantau 8 bed) dan ruang kerja terang
+   kanan (KPI, grafik laju napas, timer henti napas, sinyal pad, simulasi, log). Satu tampilan tetap, tanpa mode gelap. */
+:root {
+  color-scheme: light;
+  --canvas: #F5F7FA;
+  --card: #FFFFFF;
+  --side: #141518;
+  --side-2: #1E2025;
+  --side-3: #25282E;
+  --ink: #1E2022;
+  --ink-2: #6B7280;
+  --ink-3: #9CA3AF;
+  --soft: #F5F7FA;
+  --divider: #F2F4F7;
+  --blue: #79A6DC;
+  --blue-hi: #8AB4F8;
+  --blue-ink: #5B8DEF;
+  --blue-bg: #EBF2FC;
+  --pink: #E5A4CB;
+  --lav: #D5E0F2;
+  --track: #F4F7FB;
+  --dark: #141518;
+  --amber: #F5A623;
+  --amber-bg: #FFF6E5;
+  --green: #34A853;
+  --green-bg: #E6F7ED;
+  --emerald: #10B981;
+  --orange: #E8743B;
+  --orange-bg: #FDEEE5;
+  --red: #E5484D;
+  --red-bg: #FDECEC;
+  --cb: #2D63C8;
+  --cb-deep: #1F4FA8;
+  --violet: #7C5CD6;
+  --violet-bg: #F1ECFB;
+  --gray-bg: #F3F4F6;
+  /* skala keparahan: isi solid agar terbaca sekilas */
+  --sev-warn: #F59E0B;
+  --sev-warn-ink: #1E2022;
+  --sev-warn-soft: #FEF3C7;
+  --sev-crit: #C2410C;
+  --sev-crit-hi: #F97316;
+  --sev-crit-soft: #FFEDD5;
+  --sev-alarm: #DC2626;
+  --sev-tech: #7C3AED;
+  --sev-tech-soft: #EDE9FE;
+  --f: "Plus Jakarta Sans", "Segoe UI", Roboto, system-ui, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 5%), 0 1px 3px rgb(16 24 40 / 4%);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--canvas); color: var(--ink);
+  font-family: var(--f); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 24px;
+}
+@media (min-width: 768px) {
+  body { padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); padding-block: 24px; }
+}
+button, select, input { font: inherit; color: inherit; }
+h1, h2, h3, h4 { text-wrap: balance; }
+:focus-visible { outline: 3px solid var(--blue-ink); outline-offset: 2px; }
+.shell { display: flex; flex-direction: column; gap: 24px; max-width: 1580px; margin: 0 auto; }
+@media (min-width: 1024px) { .shell { flex-direction: row; align-items: flex-start; } }
+
+/* ---------- Panel gelap ---------- */
+.side {
+  background: var(--side); color: #fff; border-radius: 28px; padding: 16px; display: flex; gap: 12px; min-width: 0;
+  box-shadow: 0 20px 25px -5px rgb(20 21 24 / 20%), 0 8px 10px -6px rgb(20 21 24 / 16%);
+}
+@media (min-width: 1024px) {
+  .side { width: 340px; flex-shrink: 0; position: sticky; top: max(24px, env(safe-area-inset-top, 0px)); max-height: calc(100vh - 48px); }
+}
+.rail { width: 48px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-right: 8px; border-right: 1px solid rgb(255 255 255 / 10%); }
+.logo { width: 36px; height: 36px; border-radius: 12px; background: rgb(255 255 255 / 10%); color: var(--blue-hi); display: grid; place-items: center; margin-bottom: 8px; }
+.logo svg { width: 20px; height: 20px; }
+.rail-nav, .rail-util { display: flex; flex-direction: column; gap: 6px; }
+.rail-util { margin-top: auto; padding-top: 12px; }
+.rail-btn { position: relative; width: 40px; height: 40px; border-radius: 12px; border: 0; background: transparent; color: var(--ink-3); display: grid; place-items: center; cursor: pointer; transition: background-color .15s, color .15s; }
+.rail-toggle { margin-bottom: 6px; }
+.rail-demo { display: none; color: var(--blue-hi); }
+.rdot { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--side); }
+.rail-btn svg { width: 20px; height: 20px; }
+.rail-btn:hover { background: rgb(255 255 255 / 10%); color: #fff; }
+.rail-btn.is-active { background: var(--blue-hi); color: var(--dark); }
+.rail-btn[aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+.rail-btn[aria-disabled="true"]:hover { background: transparent; color: var(--ink-3); }
+.side-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+/* Panel tertutup: hanya rail ikon yang tersisa */
+.side { transition: width .25s ease; }
+.side.is-collapsed .side-col { display: none; }
+.side.is-collapsed .rail { border-right: 0; padding-right: 0; }
+.side.is-collapsed .rail-demo { display: grid; }
+@media (min-width: 1024px) { .side.is-collapsed { width: 80px; } }
+@media (max-width: 1023px) {
+  .side.is-collapsed { border-radius: 20px; padding: 10px 12px; }
+  .side.is-collapsed .rail { width: 100%; flex-direction: row; align-items: center; gap: 4px; overflow-x: auto; }
+  .side.is-collapsed .rail-nav, .side.is-collapsed .rail-util { flex-direction: row; gap: 4px; }
+  .side.is-collapsed .rail-util { margin-top: 0; margin-left: auto; padding-top: 0; }
+  .side.is-collapsed .logo, .side.is-collapsed .rail-toggle { margin: 0; }
+  .side.is-collapsed .rail-btn { width: 36px; height: 36px; flex: none; }
+  .side.is-collapsed [data-nav="cal"], .side.is-collapsed [data-nav="notif"], .side.is-collapsed [data-nav="logout"] { display: none; }
+}
+
+.cal { background: #fff; color: var(--ink); border-radius: 16px; padding: 16px; flex: none; }
+.cal-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cal-h h2 { font-size: 14px; font-weight: 600; margin: 0; }
+.cal-nav { display: flex; gap: 6px; }
+.cal-nav button { width: 24px; height: 24px; border-radius: 50%; border: 0; background: var(--gray-bg); color: #4B5563; display: grid; place-items: center; cursor: pointer; }
+.cal-nav svg { width: 14px; height: 14px; }
+.cal-month { font-size: 12px; color: var(--ink-2); margin: 2px 0 10px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; text-align: center; }
+.cal-grid .dh { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--ink-3); padding-bottom: 4px; }
+.cal-grid .dh.we { color: #FB7185; }
+.cal-grid .d { font-size: 12px; line-height: 28px; border-radius: 8px; font-variant-numeric: tabular-nums; }
+.cal-grid .d.out { color: #D1D5DB; }
+.cal-grid .d.today { background: var(--blue); color: #fff; font-weight: 600; }
+.cal-foot { margin-top: 10px; font-size: 11.5px; color: var(--ink-2); }
+
+.sum-pill { flex: none; background: var(--side-2); border-radius: 16px; padding: 12px 12px 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; color: #E5E7EB; }
+.sum-pill b { color: var(--blue-hi); font-size: 20px; font-weight: 700; margin-right: 4px; font-variant-numeric: tabular-nums; }
+.sum-pill button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgb(255 255 255 / 10%); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.sum-pill button svg { width: 16px; height: 16px; }
+.demo-btn { flex: none; border: 0; cursor: pointer; background: var(--blue-hi); color: var(--dark); border-radius: 14px; padding: 11px 14px; min-height: 44px; font-weight: 700; font-size: 13.5px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.demo-btn svg { width: 15px; height: 15px; }
+.demo-btn[disabled] { opacity: .65; cursor: default; }
+.queue-h { flex: none; display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--ink-3); padding: 2px 6px 0; }
+.queue { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; flex: 1; scrollbar-width: thin; scrollbar-color: #3A3D44 transparent; }
+.queue::-webkit-scrollbar { width: 6px; }
+.queue::-webkit-scrollbar-track { background: transparent; }
+.queue::-webkit-scrollbar-thumb { background: #3A3D44; border-radius: 999px; }
+.qi { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 14px; cursor: pointer; }
+.qi::after { content: ""; position: absolute; z-index: 1; right: 21px; top: 50%; height: 100%; width: 1px; background: rgb(255 255 255 / 12%); }
+.qi:last-child::after { display: none; }
+.qi:hover { background: rgb(255 255 255 / 5%); }
+.qi[aria-current="true"] { background: var(--side-2); box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 28%); }
+.av { width: 40px; height: 40px; border-radius: 50%; background: var(--side-3); color: #E5E7EB; display: grid; place-items: center; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.av svg { width: 18px; height: 18px; color: var(--ink-3); }
+.qi[data-s="pra"] .av { box-shadow: 0 0 0 2px var(--red); }
+.qi[data-s="codeblue"] .av { box-shadow: 0 0 0 2px var(--cb); }
+.q-txt { min-width: 0; display: flex; flex-direction: column; }
+.q-name { font-size: 14px; font-weight: 500; color: #fff; line-height: 1.25; }
+.q-sub { font-size: 12px; color: var(--ink-3); line-height: 1.3; overflow-wrap: break-word; }
+.q-right { display: flex; align-items: center; gap: 8px; }
+.q-val { font-size: 11px; line-height: 1.35; color: var(--ink-3); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.q-val b { color: #E5E7EB; font-weight: 600; }
+.node { position: relative; z-index: 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--side-3); color: var(--ink-3); flex: none; }
+.node svg { width: 15px; height: 15px; }
+.qi[data-s="stabil"] .node { background: color-mix(in srgb, var(--emerald) 22%, var(--side)); color: #34D399; }
+.qi[data-s="waspada"] .node { background: var(--sev-warn); color: var(--sev-warn-ink); }
+.qi[data-s="kritis"] .node { background: var(--sev-crit-hi); color: #fff; }
+.qi[data-s="pra"] .node { background: var(--sev-alarm); color: #fff; animation: ring 1.2s ease-in-out infinite; }
+.qi[data-s="codeblue"] .node { background: #3B82F6; color: #fff; }
+.qi[data-s="ditahan"] .node { background: var(--side-3); color: var(--ink-3); }
+.qi[data-s="kosong"] .node { background: var(--side); color: #6B7280; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%); }
+.qi[data-s="teknis"] .node { background: #8B5CF6; color: #fff; }
+/* baris berwarna untuk bed yang perlu perhatian */
+.qi[data-s="waspada"] { background: rgb(245 158 11 / 15%); }
+.qi[data-s="kritis"] { background: rgb(249 115 22 / 20%); }
+.qi[data-s="pra"] { background: rgb(220 38 38 / 26%); }
+.qi[data-s="codeblue"] { background: rgb(59 130 246 / 26%); }
+.qi[data-s="teknis"] { background: rgb(139 92 246 / 20%); }
+.q-st { display: block; font-weight: 800; letter-spacing: .01em; }
+.qi[data-s="waspada"] .q-st { color: #FCD34D; }
+.qi[data-s="kritis"] .q-st { color: #FDBA74; }
+.qi[data-s="pra"] .q-st { color: #FECACA; }
+.qi[data-s="codeblue"] .q-st { color: #BFDBFE; }
+.qi[data-s="teknis"] .q-st { color: #DDD6FE; }
+@keyframes ring { 50% { box-shadow: 0 0 0 5px rgb(229 72 77 / 30%); } }
+
+/* ---------- Ruang kerja ---------- */
+.work { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+.greet { min-width: 0; }
+.greet h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+.greet p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.clock { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
+.top-btns { display: flex; gap: 10px; }
+.circ { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 0; background: #fff; color: #374151; box-shadow: var(--shadow-sm); display: grid; place-items: center; cursor: pointer; }
+.circ svg { width: 18px; height: 18px; }
+.circ:hover { color: var(--ink); background: #FAFBFC; }
+.circ .dot { position: absolute; top: 9px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 0 2px #fff; }
+.circ .dot.alarm { background: var(--red); }
+
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 1.3; white-space: nowrap; }
+.pill svg { width: 13px; height: 13px; flex: none; }
+.pill[data-s="stabil"] { background: var(--green-bg); color: #1E7B3A; }
+.pill[data-s="waspada"] { background: var(--sev-warn); color: var(--sev-warn-ink); font-weight: 700; }
+.pill[data-s="kritis"] { background: var(--sev-crit); color: #fff; font-weight: 700; }
+.pill[data-s="pra"] { background: var(--sev-alarm); color: #fff; font-weight: 700; }
+.pill[data-s="codeblue"] { background: var(--cb); color: #fff; font-weight: 700; }
+.pill[data-s="ditahan"] { background: var(--gray-bg); color: var(--ink-2); }
+.pill[data-s="kosong"] { background: var(--gray-bg); color: var(--ink-3); }
+.pill[data-s="teknis"] { background: var(--sev-tech); color: #fff; font-weight: 700; }
+.pill[data-s="info"] { background: var(--blue-bg); color: var(--blue-ink); }
+
+.card { background: var(--card); border: none; border-radius: 16px; padding: 20px; box-shadow: var(--shadow-sm); min-width: 0; }
+.card-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-bottom: 16px; }
+.card-h h2 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); }
+.card-h .sub { font-size: 12px; color: var(--ink-3); }
+.sels { display: flex; flex-wrap: wrap; gap: 8px; }
+.sel {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background: #F9FAFB url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 12px;
+  border: 1px solid #E5E7EB; border-radius: 8px; padding: 6px 28px 6px 12px; font-size: 12px; color: #374151; max-width: 100%;
+}
+.sel:disabled { opacity: .5; cursor: not-allowed; }
+
+/* KPI */
+.kpis { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 768px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.ibtn { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-3); display: grid; place-items: center; cursor: pointer; flex: none; }
+.ibtn svg { width: 18px; height: 18px; }
+.ibtn:hover { background: var(--gray-bg); color: var(--ink); }
+.kpi-main { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 12px; margin-top: 12px; }
+.big { font-size: 36px; font-weight: 700; letter-spacing: -.02em; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.big.mid { font-size: 30px; }
+.big.amber { color: var(--amber); }
+.unit { background: var(--blue-bg); color: var(--blue-ink); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle; letter-spacing: 0; }
+.grow { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); }
+.grow .badge { background: #ECFDF5; color: #059669; border-radius: 999px; padding: 2px 8px; font-weight: 600; }
+.amber-pill { background: var(--amber-bg); color: var(--amber); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.split { height: 8px; border-radius: 999px; overflow: hidden; display: flex; gap: 3px; margin-top: 16px; }
+.split i { display: block; height: 100%; border-radius: 999px; flex-basis: 0; transition: flex-grow .4s; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.kpi-cap { margin: 10px 0 0; font-size: 12px; color: var(--ink-3); }
+
+/* Baris asimetris */
+.row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1240px) { .row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
+
+/* Grafik batang bertrack */
+.bars-wrap { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; padding-top: 30px; }
+.yax { position: relative; height: 160px; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.yax span { position: absolute; right: 0; transform: translateY(50%); }
+.bars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; }
+.bcol { position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; cursor: pointer; }
+.btrack {
+  position: relative; height: 160px; border-radius: 8px 8px 0 0; display: flex; align-items: flex-end;
+  background:
+    repeating-linear-gradient(to top, transparent 0 39px, rgb(30 32 34 / 6%) 39px 40px),
+    linear-gradient(to top, rgb(220 38 38 / 6%) 0 21%, rgb(245 158 11 / 10%) 21% 26%, transparent 26% 51%, rgb(245 158 11 / 10%) 51% 74%, rgb(220 38 38 / 6%) 74% 100%),
+    var(--tk, var(--track));
+}
+.bcol[data-s="pra"] { --tk: #FCE4E5; }
+.bcol[data-s="codeblue"] { --tk: #DCE6F8; --bar: var(--cb); }
+.bcol[data-s="waspada"] { --bar: var(--sev-warn); }
+.bcol[data-s="kritis"] { --bar: var(--sev-crit); }
+.bbar { position: relative; width: 100%; height: 0; background: var(--bar, var(--blue)); border-radius: 8px 8px 0 0; transition: height .35s ease, background-color .2s; }
+.bcol:hover .bbar { filter: brightness(.92); }
+.bcol.is-active .btrack { box-shadow: 0 0 0 2px var(--dark); }
+.bcol.is-active:not(.is-empty) .bbar::before { content: ""; position: absolute; left: 50%; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid var(--dark); transform: translateX(-50%); box-sizing: border-box; }
+.btip { display: none; position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); background: var(--dark); color: #fff; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 8px; white-space: nowrap; pointer-events: none; }
+.bcol:hover .btip, .bcol.is-active .btip { display: block; }
+.bcol:first-child .btip { left: 0; transform: none; }
+.bcol:last-child .btip { left: auto; right: 0; transform: none; }
+.blabel { font-size: 12px; color: var(--ink-2); text-align: center; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.blabel .sd { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.lg-sel { box-shadow: inset 0 0 0 2px var(--dark); background: transparent !important; border-radius: 2px !important; }
+.bcol.is-active .blabel { color: var(--ink); font-weight: 600; }
+.bcol.is-empty .btrack::after { content: "—"; position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; color: var(--ink-3); font-size: 12px; }
+.bars-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-top: 14px; font-size: 12px; color: var(--ink-2); }
+.bars-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.bars-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+@media (max-width: 560px) { .blabel .br { display: none; } .bars { gap: 6px; } }
+
+/* Gauge */
+.gauge { position: relative; width: 100%; max-width: 300px; margin: 4px auto 0; }
+.gauge svg { display: block; width: 100%; height: auto; }
+.gauge-c { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; }
+.gauge-c .big { font-size: 32px; }
+.gauge-c small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.gleg { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.gleg div { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.gleg i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.gleg b { color: var(--ink); font-weight: 700; min-width: 76px; font-variant-numeric: tabular-nums; }
+
+/* Kartu sinyal */
+.sig-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.sig-h h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.sig-meta { margin: 4px 0 16px; font-size: 12px; color: var(--ink-3); }
+.vit { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 600px) { .vit { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.vit > div { background: var(--soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.vit .l { font-size: 12px; color: var(--ink-2); }
+.vit .v { font-size: 26px; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.vit .v small { font-size: 12px; font-weight: 500; color: var(--ink-3); margin-left: 3px; letter-spacing: 0; }
+.vit .v.mono { font-family: var(--mono); font-size: 15px; font-weight: 500; line-height: 1.6; padding-top: 4px; overflow-wrap: anywhere; }
+.vit .s { font-size: 11.5px; color: var(--ink-3); }
+.meter { height: 6px; border-radius: 999px; background: #E9EDF3; overflow: hidden; margin-top: 6px; }
+.meter i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--blue); transition: width .25s; }
+.chart { position: relative; min-width: 0; }
+.chart-h { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 10px; margin: 10px 0 4px; }
+.chart-h b { font-size: 13px; font-weight: 600; }
+.chart-h span { font-size: 12px; color: var(--ink-3); }
+.key { display: inline-flex; align-items: center; gap: 5px; }
+.key i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+.key i.k-eff { background: var(--dark); }
+.key i.k-no { box-shadow: inset 0 0 0 2px var(--ink-3); }
+.key i.k-hold { border-radius: 2px; background: repeating-linear-gradient(135deg, transparent 0 2px, var(--ink-3) 2px 3px); }
+canvas.cv { display: block; width: 100%; touch-action: pan-y; }
+.cv-raw { height: 80px; }
+.cv-b { height: 112px; }
+.tip { position: absolute; z-index: 5; pointer-events: none; transform: translate(-50%, -100%); background: var(--dark); color: #fff; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 8px; white-space: nowrap; }
+.chain { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+@media (max-width: 640px) { .chain { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.nodec { background: var(--soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.nodec h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+.nodec h4 svg { width: 15px; height: 15px; color: var(--blue-ink); }
+.nodec .nv { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.nodec .nv b { font-weight: 700; }
+.nodec[data-hot="true"] { background: var(--red-bg); }
+.nodec[data-hot="true"] h4 svg { color: var(--red); }
+.nodec[data-sev="waspada"] { background: var(--sev-warn-soft); }
+.nodec[data-sev="waspada"] h4 svg { color: #B45309; }
+.nodec[data-sev="kritis"] { background: var(--sev-crit-soft); }
+.nodec[data-sev="kritis"] h4 svg { color: var(--sev-crit); }
+.vit > div[data-sev="waspada"] { background: var(--sev-warn-soft); box-shadow: inset 0 0 0 2px var(--sev-warn); }
+.vit > div[data-sev="kritis"] { background: var(--sev-crit-soft); box-shadow: inset 0 0 0 2px var(--sev-crit); }
+.vit > div[data-sev="kritis"] .v { color: var(--sev-crit); }
+.outs { display: flex; flex-direction: column; gap: 3px; }
+.out { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); }
+.out svg { width: 14px; height: 14px; opacity: .6; }
+.out[data-on="true"] { color: var(--ink); font-weight: 600; }
+.out[data-on="true"] svg { color: var(--red); opacity: 1; }
+.out[data-on="true"][data-sev="waspada"] svg { color: #D97706; }
+.out[data-on="true"][data-sev="kritis"] svg { color: var(--sev-crit); }
+.out[data-on="true"][data-sev="teknis"] svg { color: var(--sev-tech); }
+.chain-note { margin: 10px 0 0; font-size: 12px; color: var(--ink-3); }
+
+/* Kartu simulasi */
+.sim-bed { font-size: 12px; color: var(--ink-3); }
+.sc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sc { border: 0; border-radius: 12px; background: var(--soft); padding: 10px 12px; text-align: left; cursor: pointer; font-size: 13px; font-weight: 600; line-height: 1.25; color: var(--ink); }
+.sc small { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
+.sc:hover:not(:disabled) { background: var(--blue-bg); }
+.sc:disabled { opacity: .45; cursor: not-allowed; }
+.manual { margin-top: 12px; display: flex; align-items: center; gap: 12px; background: var(--soft); border-radius: 14px; padding: 12px; }
+.manual-btn { width: 52px; height: 52px; flex: none; border-radius: 50%; border: 5px solid #D6E2F7; background: var(--cb); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.manual-btn svg { width: 22px; height: 22px; }
+.manual p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.manual b { color: var(--ink); }
+.cal-txt { margin: 12px 0 0; font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); overflow-wrap: anywhere; }
+
+/* Log */
+.log-wrap { overflow: auto; max-height: 460px; margin: 0 -20px -20px; border-radius: 0 0 16px 16px; }
+.log table { width: 100%; min-width: 820px; border-collapse: collapse; text-align: left; }
+.log th { position: sticky; top: 0; z-index: 1; background: #fff; font-size: 12px; font-weight: 400; color: var(--ink-3); padding: 10px 14px; white-space: nowrap; }
+.log th:first-child, .log td:first-child { padding-left: 20px; }
+.log td { padding: 12px 14px; font-size: 13px; border-top: 1px solid var(--divider); vertical-align: middle; }
+.who { display: flex; align-items: center; gap: 10px; }
+.who .av { width: 32px; height: 32px; font-size: 11px; background: #EEF2F7; color: #4B5563; flex: none; }
+.who .av svg { width: 15px; height: 15px; color: var(--ink-3); }
+.who b { display: block; font-weight: 500; color: #1F2937; white-space: nowrap; }
+.who small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.log td.dt { font-size: 12px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.log td.det { font-size: 12.5px; color: var(--ink-2); min-width: 200px; }
+.log td.src { font-size: 12px; color: var(--ink-2); }
+.nw { white-space: nowrap; }
+.log td.dt small.dd { display: block; font-size: 11px; color: var(--ink-3); }
+.fu { display: inline-flex; align-items: flex-start; gap: 6px; font-size: 12.5px; line-height: 1.35; }
+.fu svg { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+.fu.ok { color: var(--green); }
+.fu.wait { color: var(--ink-3); }
+.fu.esc { color: var(--red); }
+.fu.info { color: var(--ink-3); }
+.log tr[data-g="sim"] td { color: var(--ink-3); }
+.log-empty { padding: 20px; color: var(--ink-3); font-size: 13px; }
+
+.foot { margin: 0; font-size: 12px; color: var(--ink-3); max-width: 92ch; }
+
+/* Strip 'Perlu perhatian' */
+.watch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.watch-h { font-size: 13px; font-weight: 700; color: var(--ink-2); margin-right: 4px; }
+.wchip { border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 10px; border-radius: 12px; font-size: 13px; line-height: 1.2; text-align: left; box-shadow: var(--shadow-sm); }
+.wchip svg { width: 17px; height: 17px; flex: none; }
+.wchip b { font-weight: 800; }
+.wchip .wm { opacity: .9; font-variant-numeric: tabular-nums; }
+.wchip[data-s="waspada"] { background: var(--sev-warn); color: var(--sev-warn-ink); }
+.wchip[data-s="kritis"] { background: var(--sev-crit); color: #fff; }
+.wchip[data-s="teknis"] { background: var(--sev-tech); color: #fff; }
+.wchip:hover { filter: brightness(.95); }
+.wchip:focus-visible { outline: 3px solid var(--dark); outline-offset: 2px; }
+.watch-ok { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #1E7B3A; background: var(--green-bg); padding: 9px 14px; border-radius: 12px; }
+.watch-ok svg { width: 16px; height: 16px; }
+
+/* Banner alarm */
+.alerts { display: flex; flex-direction: column; gap: 10px; }
+.alerts:empty { display: none; }
+.alert { position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px 16px; padding: 16px 20px 18px; border-radius: 16px; cursor: pointer; }
+.alert > svg { width: 32px; height: 32px; }
+.alert[data-s="codeblue"] { background: var(--cb); color: #fff; box-shadow: 0 12px 24px -10px rgb(45 99 200 / 60%); }
+.alert[data-s="pra"] { background: var(--red-bg); color: var(--ink); }
+.alert[data-s="pra"] > svg { color: var(--red); }
+.a-title { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.01em; line-height: 1.2; }
+.a-detail { margin-top: 2px; font-size: 13px; }
+.alert[data-s="codeblue"] .a-detail { color: rgb(255 255 255 / 88%); }
+.a-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.a-bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--red); }
+.btn { border: 0; cursor: pointer; border-radius: 12px; padding: 10px 16px; min-height: 40px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-white { background: #fff; color: var(--ink); box-shadow: var(--shadow-sm); }
+.btn-red { background: var(--red); color: #fff; }
+.btn-oncb { background: #fff; color: var(--cb-deep); }
+
+/* Notifikasi ponsel */
+.toasts { position: fixed; z-index: 50; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); width: min(340px, calc(100vw - 32px)); display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none; }
+.toast { pointer-events: auto; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px 14px; border-radius: 16px; background: var(--side-2); color: #fff; box-shadow: 0 12px 28px -8px rgb(20 21 24 / 45%); animation: tin .25s ease-out; }
+.toast > svg { width: 20px; height: 20px; color: var(--blue-hi); margin-top: 1px; }
+.toast .who2 { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--ink-3); }
+.toast .what { font-size: 14px; font-weight: 700; line-height: 1.3; }
+.toast .det { font-size: 12.5px; color: #D1D5DB; }
+.toast[data-s="pra"] > svg { color: #FCA5A5; }
+.toast[data-s="codeblue"] { background: var(--cb); }
+.toast[data-s="codeblue"] > svg, .toast[data-s="codeblue"] .who2 { color: #DCE6F8; }
+@keyframes tin { from { transform: translateY(8px); opacity: 0; } }
+
+/* Demo terpandu */
+.guide { position: fixed; z-index: 45; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); width: min(410px, calc(100vw - 32px)); background: var(--dark); color: #fff; border-radius: 20px; padding: 16px 18px; box-shadow: 0 20px 40px -12px rgb(20 21 24 / 55%); }
+.g-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.g-step { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--blue-hi); }
+.g-stop { border: 1px solid rgb(255 255 255 / 25%); background: transparent; color: #fff; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; min-height: 30px; }
+.guide p { margin: 8px 0 12px; font-size: 14.5px; line-height: 1.5; color: #E5E7EB; }
+.g-bar { height: 4px; border-radius: 999px; background: rgb(255 255 255 / 12%); overflow: hidden; }
+.g-bar i { display: block; height: 100%; width: 0; background: var(--blue-hi); border-radius: 999px; }
+
+/* Popover & modal */
+.pop { position: fixed; z-index: 70; width: min(320px, calc(100vw - 32px)); max-height: min(440px, calc(100vh - 32px)); overflow: auto; background: #fff; color: var(--ink); border-radius: 16px; padding: 14px; box-shadow: 0 16px 36px -8px rgb(16 24 40 / 25%); }
+.pop h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+.pop p { margin: 4px 0; font-size: 12.5px; color: var(--ink-2); }
+.sw-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--divider); font-size: 13px; }
+.sw-row small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.sw { position: relative; width: 40px; height: 24px; flex: none; border-radius: 999px; border: 0; background: #E5E7EB; cursor: pointer; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 20%); transition: transform .15s; }
+.sw[aria-checked="true"] { background: var(--blue-ink); }
+.sw[aria-checked="true"]::after { transform: translateX(16px); }
+.search-in { width: 100%; border: 1px solid #E5E7EB; border-radius: 10px; padding: 9px 12px; font-size: 13px; background: #F9FAFB; }
+.res { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.res button { width: 100%; border: 0; background: transparent; border-radius: 10px; padding: 8px; display: flex; align-items: center; gap: 10px; text-align: left; cursor: pointer; }
+.res button:hover { background: var(--soft); }
+.res .av { width: 32px; height: 32px; font-size: 11px; background: #EEF2F7; color: #4B5563; flex: none; }
+.res b { display: block; font-size: 13px; font-weight: 600; }
+.res small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.nl { list-style: none; margin: 0; padding: 0; }
+.nl li { padding: 9px 0; border-top: 1px solid var(--divider); font-size: 12.5px; }
+.nl li b { display: block; font-size: 13px; }
+.nl li span { color: var(--ink-3); font-size: 11.5px; }
+.about { position: fixed; inset: 0; z-index: 80; background: rgb(20 21 24 / 55%); display: grid; place-items: center; padding: 16px; }
+.about-card { width: 100%; max-width: 720px; max-height: calc(100% - 32px); overflow: auto; background: #fff; color: var(--ink); border-radius: 20px; padding: 22px 24px; box-shadow: 0 24px 48px -12px rgb(20 21 24 / 40%); }
+.about-card h2 { margin: 0 0 6px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.about-card h3 { margin: 16px 0 6px; font-size: 14px; font-weight: 700; }
+.about-card p, .about-card li { font-size: 13.5px; color: #374151; max-width: 68ch; }
+.about-card ul { padding-left: 18px; margin: 6px 0; }
+.about-x { float: right; }
+.tbl-wrap { overflow-x: auto; }
+.about-card table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+.about-card th { text-align: left; font-weight: 400; color: var(--ink-3); font-size: 12px; padding: 6px 8px; }
+.about-card td { padding: 7px 8px; border-top: 1px solid var(--divider); vertical-align: top; }
+
+@media (max-width: 640px) {
+  .alert { grid-template-columns: auto minmax(0, 1fr); }
+  .a-actions { grid-column: 1 / -1; justify-content: stretch; }
+  .a-actions .btn { flex: 1 1 140px; }
+  .toasts { bottom: auto; top: calc(env(safe-area-inset-top, 0px) + 12px); flex-direction: column; }
+  .greet h1 { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-coil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10.5 12h3"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8M16 13H8M16 17H8"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-arrow-ur" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-esc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16V8M8.5 11.5 12 8l3.5 3.5"/></symbol>
+    <symbol id="i-dot" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3.2"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.4v.1"/></symbol>
+    <symbol id="i-crit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z"/><path d="M12 7.5v5.5M12 16.4v.1"/></symbol>
+    <symbol id="i-alarm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-cb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.3a4.2 4.2 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/><path d="M7.5 12.5h2.6l1.2-2.3 2 4.4 1.2-2.1h2"/></symbol>
+    <symbol id="i-hold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+    <symbol id="i-bed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6v13M3 15h18v4M21 15v-2.5A3.5 3.5 0 0 0 17.5 9H11v6"/><circle cx="7" cy="11.5" r="2"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4M7 7h10v3.5a5 5 0 0 1-10 0z"/><path d="M12 15.5V21"/><path d="M4 4l16 16"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="i-desk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h4l5 4v-13l-5 4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></symbol>
+    <symbol id="i-lamp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.6 1 2.5h6c0-.9.2-1.7 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+    <symbol id="i-team" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.6 14.2A5 5 0 0 1 21 19"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M9.5 3v4M14.5 3v4M9.5 17v4M14.5 17v4M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4"/></symbol>
+    <symbol id="i-rules" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h9M4 18h6"/><path d="M15.5 16.5l2.2 2.2 3.8-4.4"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h12M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-panel-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></symbol>
+    <symbol id="i-panel-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5A.8.8 0 0 0 8 5.2z"/></symbol>
+  </defs>
+</svg>
+
+<div class="shell">
+  <aside class="side" aria-label="Navigasi, jadwal, dan antrean pantau">
+    <nav class="rail" aria-label="Navigasi utama">
+      <div class="logo" title="SiagaBed"><svg aria-hidden="true"><use href="#i-coil"/></svg></div>
+      <button class="rail-btn rail-toggle" type="button" id="side-toggle" aria-controls="side-col" aria-expanded="true" title="Tutup panel" aria-label="Tutup panel"><svg aria-hidden="true"><use href="#i-panel-close"/></svg></button>
+      <div class="rail-nav">
+        <button class="rail-btn is-active" type="button" data-nav="top" title="Dasbor" aria-label="Dasbor"><svg aria-hidden="true"><use href="#i-grid"/></svg></button>
+        <button class="rail-btn" type="button" data-nav="queue" title="Pasien" aria-label="Pasien"><svg aria-hidden="true"><use href="#i-users"/></svg><span class="rdot" id="rail-dot" hidden></span></button>
+        <button class="rail-btn" type="button" data-nav="log" title="Rekam medis dan log kejadian" aria-label="Rekam medis dan log kejadian"><svg aria-hidden="true"><use href="#i-file"/></svg></button>
+        <button class="rail-btn" type="button" data-nav="cal" title="Jadwal jaga" aria-label="Jadwal jaga"><svg aria-hidden="true"><use href="#i-cal"/></svg></button>
+        <button class="rail-btn" type="button" data-nav="notif" title="Pesan ke ponsel tim" aria-label="Pesan ke ponsel tim"><svg aria-hidden="true"><use href="#i-chat"/></svg></button>
+        <button class="rail-btn rail-demo" type="button" data-nav="demo" title="Demo terpandu (±3 menit)" aria-label="Jalankan demo terpandu"><svg aria-hidden="true"><use href="#i-play"/></svg></button>
+      </div>
+      <div class="rail-util">
+        <button class="rail-btn" type="button" data-nav="settings" title="Pengaturan" aria-label="Pengaturan"><svg aria-hidden="true"><use href="#i-gear"/></svg></button>
+        <button class="rail-btn" type="button" data-nav="help" title="Tentang prototipe" aria-label="Tentang prototipe"><svg aria-hidden="true"><use href="#i-help"/></svg></button>
+        <button class="rail-btn" type="button" data-nav="logout" title="Keluar (nonaktif di prototipe)" aria-label="Keluar, nonaktif di prototipe" aria-disabled="true"><svg aria-hidden="true"><use href="#i-logout"/></svg></button>
+      </div>
+    </nav>
+    <div class="side-col" id="side-col">
+      <section class="cal" id="cal" aria-label="Jadwal jaga">
+        <div class="cal-h">
+          <h2>Jadwal jaga</h2>
+          <div class="cal-nav">
+            <button type="button" id="cal-prev" aria-label="Bulan sebelumnya"><svg aria-hidden="true"><use href="#i-chev-l"/></svg></button>
+            <button type="button" id="cal-next" aria-label="Bulan berikutnya"><svg aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+          </div>
+        </div>
+        <div class="cal-month" id="cal-month"></div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-foot">Hari ini: shift pagi 07.00–14.00 · Bangsal Melati</div>
+      </section>
+      <div class="sum-pill"><span><b id="sum-n">0</b>Pasien dipantau</span><button type="button" id="sum-go" aria-label="Lihat laju napas semua bed"><svg aria-hidden="true"><use href="#i-arrow-ur"/></svg></button></div>
+      <button class="demo-btn" type="button" id="btn-guide"><svg aria-hidden="true"><use href="#i-play"/></svg><span>Demo terpandu · ±3 menit</span></button>
+      <div class="queue-h"><span>Antrean pantau · 2 kamar KRIS</span><span>urut bed</span></div>
+      <ul class="queue" id="queue" aria-label="Daftar bed"></ul>
+    </div>
+  </aside>
+
+  <main class="work" id="work">
+    <header class="top">
+      <div class="greet">
+        <h1>Halo, Ns. Rina!</h1>
+        <p><span>Perawat jaga · Bangsal Melati, Lantai 3</span><span class="clock" id="clock">--:--:--</span><span class="pill" data-s="info">Simulasi · data fiktif</span></p>
+      </div>
+      <div class="top-btns">
+        <button class="circ" type="button" id="btn-search" aria-label="Cari pasien atau bed"><svg aria-hidden="true"><use href="#i-search"/></svg></button>
+        <button class="circ" type="button" id="btn-bell" aria-label="Notifikasi ponsel"><svg aria-hidden="true"><use href="#i-bell"/></svg><span class="dot" id="bell-dot"></span></button>
+        <button class="circ" type="button" id="btn-user" aria-label="Profil"><svg aria-hidden="true"><use href="#i-user"/></svg></button>
+      </div>
+    </header>
+
+    <div class="alerts" id="alerts" aria-live="assertive"></div>
+    <section class="watch" id="watch" aria-label="Bed yang perlu perhatian"></section>
+
+    <section class="kpis" aria-label="Ringkasan">
+      <div class="card">
+        <div class="kpi-top"><span>Eskalasi henti napas</span><button class="ibtn" type="button" id="k1-go" aria-label="Lihat aturan alarm"><svg aria-hidden="true"><use href="#i-arrow-ur"/></svg></button></div>
+        <div class="kpi-main"><div class="big mid">20 + 15<span class="unit">dtk</span></div></div>
+        <p class="kpi-cap">Pra-alarm setelah 20 dtk tanpa napas efektif, lalu Code Blue bila 15 dtk tidak dibatalkan.</p>
+      </div>
+      <div class="card">
+        <div class="kpi-top"><span>Pasien dipantau</span><button class="ibtn" type="button" id="k2-go" aria-label="Lihat antrean pantau"><svg aria-hidden="true"><use href="#i-more"/></svg></button></div>
+        <div class="kpi-main"><div class="big" id="k-n">0</div><div class="grow"><span class="badge" id="k-stable">0 stabil</span><span id="k-of">dari 8 bed</span></div></div>
+        <div class="split" aria-hidden="true"><i id="k-seg-a" style="background:var(--blue)"></i><i id="k-seg-b" style="background:var(--sev-warn)"></i><i id="k-seg-c" style="background:var(--sev-crit)"></i><i id="k-seg-d" style="background:#C4C9D2"></i></div>
+        <div class="legend"><span><i style="background:var(--blue)"></i><span id="k-leg-a">stabil</span></span><span><i style="background:var(--sev-warn)"></i><span id="k-leg-b">waspada</span></span><span><i style="background:var(--sev-crit)"></i><span id="k-leg-c">kritis/alarm</span></span><span><i style="background:#C4C9D2"></i><span id="k-leg-d">lainnya</span></span></div>
+      </div>
+      <div class="card">
+        <div class="kpi-top"><span>Alarm sejak dasbor dibuka</span><button class="ibtn" type="button" id="k3-go" aria-label="Lihat log alarm"><svg aria-hidden="true"><use href="#i-arrow-ur"/></svg></button></div>
+        <div class="kpi-main"><div class="big amber" id="k-alarm">0</div><span class="amber-pill" id="k-cb">0 Code Blue</span></div>
+        <p class="kpi-cap" id="k-alarm-cap">Pra-alarm dan aktivasi tombol manual, termasuk yang dibatalkan.</p>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="card" id="bars-card">
+        <div class="card-h">
+          <h2 id="bars-title">Laju napas per bed</h2>
+          <div class="sels">
+            <select class="sel" id="sel-room" aria-label="Filter kamar"><option value="all">Semua kamar</option><option value="301">Kamar 301</option><option value="302">Kamar 302</option></select>
+            <select class="sel" id="sel-mode" aria-label="Tampilan grafik"><option value="bed">Live per bed</option><option value="trend">Tren 10 menit</option></select>
+          </div>
+        </div>
+        <div class="bars-wrap">
+          <div class="yax" aria-hidden="true"><span style="bottom:0%">0</span><span style="bottom:25%">10</span><span style="bottom:50%">20</span><span style="bottom:75%">30</span><span style="bottom:100%">40</span></div>
+          <div class="bars" id="bars" role="img" aria-label="Grafik batang laju napas"></div>
+        </div>
+        <div class="bars-legend" id="bars-legend"><span><i style="background:var(--blue)"></i>normal</span><span><i style="background:var(--sev-warn)"></i>Waspada</span><span><i style="background:var(--sev-crit)"></i>Kritis</span><span><i class="lg-sel"></i>bed terpilih</span><span>pita latar = zona ambang: Kritis ≤8 atau ≥30 · Waspada 9–10 atau 21–29 /mnt</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <h2>Timer henti napas</h2>
+          <select class="sel" id="sel-bed" aria-label="Pilih bed"></select>
+        </div>
+        <div class="gauge">
+          <svg viewBox="0 0 240 134" aria-hidden="true">
+            <path id="gz-s1" fill="none" stroke="#79A6DC" stroke-width="18" stroke-linecap="round"/>
+            <path id="gz-s2" fill="none" stroke="#D5E0F2" stroke-width="18" stroke-linecap="round"/>
+            <path id="gz-s3" fill="none" stroke="#E5A4CB" stroke-width="18" stroke-linecap="round"/>
+            <circle id="gz-knob" r="10" fill="#FFFFFF" stroke="#141518" stroke-width="4" cx="24" cy="120"/>
+          </svg>
+          <div class="gauge-c"><div class="big" id="gz-big">0</div><small id="gz-lab">dtk tanpa napas efektif</small></div>
+        </div>
+        <div class="gleg">
+          <div><i style="background:#79A6DC"></i><b>0–12 dtk</b><span>jeda napas normal</span></div>
+          <div><i style="background:#D5E0F2"></i><b>12–20 dtk</b><span>diamati, belum alarm</span></div>
+          <div><i style="background:#E5A4CB"></i><b>20 + 15 dtk</b><span>pra-alarm, lalu Code Blue</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="card" id="sig">
+        <div class="sig-h"><h2 id="sig-title">Sinyal pad · Kamar 301, Bed B</h2><span class="pill" id="sig-pill" data-s="stabil"></span></div>
+        <p class="sig-meta" id="sig-meta"></p>
+        <div class="vit">
+          <div><div class="l">Laju napas</div><div class="v" id="v-rr">--<small>/mnt</small></div><div class="s" id="v-rr-sub"></div></div>
+          <div><div class="l">Kualitas sinyal (SQI)</div><div class="v" id="v-sqi">--</div><div class="meter"><i id="v-sqi-bar"></i></div></div>
+          <div><div class="l">Kehadiran di bed</div><div class="v" id="v-pres" style="font-size:20px;padding-top:4px">--</div><div class="meter"><i id="v-pres-bar"></i></div></div>
+          <div><div class="l">Frekuensi pad</div><div class="v mono" id="v-f">--</div><div class="s" id="v-f-sub"></div></div>
+        </div>
+        <div class="chart">
+          <div class="chart-h"><b>Sinyal pad mentah (Hz)</b><span>pergeseran frekuensi dari kalibrasi pad kosong · 30 dtk</span></div>
+          <canvas class="cv cv-raw" id="cv-raw" role="img" aria-label="Grafik sinyal pad mentah 30 detik terakhir"></canvas>
+        </div>
+        <div class="chart">
+          <div class="chart-h"><b>Komponen napas setelah filter (Hz)</b><span><span class="key"><i class="k-eff"></i>napas efektif</span> · <span class="key"><i class="k-no"></i>tidak efektif</span> · <span class="key"><i class="k-hold"></i>ditahan</span></span></div>
+          <canvas class="cv cv-b" id="cv-b" role="img" aria-label="Grafik komponen napas terfilter dengan penanda napas"></canvas>
+        </div>
+        <div class="chain">
+          <div class="nodec" id="n-pad"><h4><svg aria-hidden="true"><use href="#i-coil"/></svg>Pad MI</h4><div class="nv" id="n-pad-v"></div></div>
+          <div class="nodec" id="n-dsp"><h4><svg aria-hidden="true"><use href="#i-chip"/></svg>Hub: olah sinyal</h4><div class="nv" id="n-dsp-v"></div></div>
+          <div class="nodec" id="n-rule"><h4><svg aria-hidden="true"><use href="#i-rules"/></svg>Mesin aturan</h4><div class="nv" id="n-rule-v"></div></div>
+          <div class="nodec" id="n-out"><h4><svg aria-hidden="true"><use href="#i-out"/></svg>Keluaran</h4>
+            <div class="outs">
+              <div class="out" id="o-ns"><svg aria-hidden="true"><use href="#i-desk"/></svg>Nurse station</div>
+              <div class="out" id="o-hp"><svg aria-hidden="true"><use href="#i-phone"/></svg>Ponsel perawat</div>
+              <div class="out" id="o-bz"><svg aria-hidden="true"><use href="#i-sound"/></svg>Buzzer bedhead</div>
+              <div class="out" id="o-rl"><svg aria-hidden="true"><use href="#i-lamp"/></svg>Relay nurse call</div>
+              <div class="out" id="o-cb"><svg aria-hidden="true"><use href="#i-team"/></svg>Tim Code Blue</div>
+            </div>
+          </div>
+        </div>
+        <p class="chain-note">Alur sensor → ambang → alarm. Keputusan alarm diambil di hub bedhead, jadi buzzer dan relay nurse call tetap bekerja walau jaringan putus.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Simulasikan kondisi pasien</h2><span class="sim-bed" id="sim-bed"></span></div>
+        <div class="sc-grid" id="sc-grid"></div>
+        <div class="manual">
+          <button class="manual-btn" type="button" id="btn-manual" aria-label="Tekan tombol Code Blue manual di bed ini"><svg aria-hidden="true"><use href="#i-cb"/></svg></button>
+          <p><b>Tombol Code Blue manual.</b> Meniru tombol fisik di kamar. Aktivasinya masuk ke dasbor dan log yang sama.</p>
+        </div>
+        <p class="cal-txt" id="f-cal"></p>
+      </div>
+    </section>
+
+    <section class="card log" id="log" aria-label="Log kejadian">
+      <div class="card-h">
+        <h2>Log kejadian</h2>
+        <div class="sels">
+          <select class="sel" id="sel-g" aria-label="Filter jenis kejadian"><option value="all">Semua kejadian</option><option value="alarm">Alarm &amp; Code Blue</option><option value="status">Perubahan status</option><option value="teknis">Teknis &amp; kehadiran</option><option value="sim">Simulasi</option></select>
+          <select class="sel" id="sel-src" aria-label="Filter sumber"><option value="all">Semua sumber</option><option value="Pad MI">Pad MI</option><option value="Perawat">Perawat</option><option value="Tombol manual">Tombol manual</option><option value="Tim Code Blue">Tim Code Blue</option><option value="Hub">Hub</option><option value="Simulasi">Simulasi</option></select>
+        </div>
+      </div>
+      <div class="log-wrap">
+        <table>
+          <thead><tr><th scope="col">Pasien</th><th scope="col">Status</th><th scope="col">Waktu</th><th scope="col">Rincian</th><th scope="col">Sumber</th><th scope="col">Tindak lanjut</th></tr></thead>
+          <tbody id="log-body"></tbody>
+        </table>
+        <div class="log-empty" id="log-empty" hidden>Tidak ada kejadian untuk filter ini.</div>
+      </div>
+    </section>
+
+    <p class="foot">Prototype Alpha SiagaBed untuk ANGEL Innovation Hackathon 2026, Topik 7. Sinyal pad dibangkitkan model matematis di peramban, lalu diolah oleh rantai pengolahan sinyal dan mesin aturan yang dirancang untuk hub bedhead. Nama perawat, nama pasien, nomor RM, dan nomor SEP fiktif. Belum diuji pada manusia dan bukan alat diagnosis.</p>
+  </main>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="guide" id="guide" hidden>
+  <div class="g-top"><span class="g-step" id="g-step">Langkah 1 dari 9</span><button class="g-stop" type="button" id="g-stop">Hentikan demo</button></div>
+  <p id="g-text"></p>
+  <div class="g-bar"><i id="g-bar"></i></div>
+</div>
+
+<div class="pop" id="pop" hidden role="dialog" aria-label="Panel"></div>
+
+<div class="about" id="about" hidden>
+  <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="about-h">
+    <button class="btn btn-white about-x" type="button" id="about-x"><svg aria-hidden="true" style="width:16px;height:16px"><use href="#i-x"/></svg>Tutup</button>
+    <h2 id="about-h">Tentang prototipe ini</h2>
+    <p>SiagaBed memantau napas pasien dari pad tipis berisi kumparan induksi magnetik (MI) di bawah sprei. Hub di bedhead mengolah sinyalnya, menjalankan mesin aturan, lalu memanggil perawat dan Tim Code Blue. Halaman ini adalah Prototype Alpha untuk alur <b>sensor → ambang kondisi kritis → alarm</b>.</p>
+    <h3>Apa yang disimulasikan</h3>
+    <p>Setiap bed punya model sinyal pad: frekuensi resonansi kumparan sekitar 4,2 MHz yang turun ±2,4–3,2 kHz saat pasien berbaring dan bergeser puluhan Hz mengikuti napas. Model menambahkan derau, kuantisasi, drift osilator, lonjakan, dan artefak gerak. Sinyal ini <b>bukan data pasien dan bukan hasil pengukuran</b>.</p>
+    <h3>Apa yang berjalan sungguhan di halaman ini</h3>
+    <ul>
+      <li>Pengolahan sinyal 25 sampel/dtk: filter Hampel (buang lonjakan) → low-pass Butterworth orde 4, 1 Hz → high-pass orde 2, 0,05 Hz (hapus drift) → deteksi siklus min–maks dengan histeresis adaptif.</li>
+      <li>Keluaran: laju napas (median 5 interval), waktu sejak napas efektif terakhir, kehadiran dari level frekuensi terhadap kalibrasi dua titik, dan SQI dari energi gangguan gerak.</li>
+      <li>SQI mengukur gangguan, bukan ada-tidaknya napas, sehingga henti napas tidak menurunkan SQI. Saat SQI rendah, keluaran ditahan dan timer dihitung ulang setelah gerak berhenti.</li>
+      <li>Napas dihitung efektif bila jaraknya ≤ 10 dtk dari napas sebelumnya. Napas tunggal setelah jeda menunggu konfirmasi napas berikutnya; selama menunggu, pra-alarm ditunda paling lama 12 dtk. Karena itu gasping yang jarang tidak me-reset timer, sesuai pedoman resusitasi yang menganggap gasping pada pasien tidak responsif sebagai henti jantung.</li>
+    </ul>
+    <h3>Aturan alarm</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Tingkat</th><th>Kriteria</th><th>Tindakan</th></tr></thead>
+        <tbody>
+          <tr><td>Waspada</td><td>RR ≤ 10 atau &gt; 20 /mnt, bertahan 2 mnt</td><td>Notifikasi nurse station</td></tr>
+          <tr><td>Kritis</td><td>RR ≤ 8 atau ≥ 30 /mnt, bertahan 1 mnt</td><td>Notifikasi prioritas, ponsel perawat</td></tr>
+          <tr><td>Pra-alarm</td><td>Tidak ada napas efektif ≥ 20 dtk pada pasien yang ada di bed</td><td>Buzzer bedhead, nurse station, ponsel perawat; verifikasi 15 dtk</td></tr>
+          <tr><td>Code Blue</td><td>Pra-alarm tidak dibatalkan, dikonfirmasi perawat, atau tombol manual ditekan</td><td>Relay nurse call, ponsel Tim Code Blue, log</td></tr>
+          <tr><td>Ditahan / bed kosong</td><td>SQI &lt; 0,50 atau pasien tidak terdeteksi</td><td>Tanpa alarm klinis; alarm teknis bila pad terlepas</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Ambang laju napas mengikuti definisi tanda vital abnormal Andersen dkk. (Resuscitation, 2016). <b>Mode demo</b> mempersingkat durasi bertahan Waspada dan Kritis menjadi 10 detik agar terlihat dalam demonstrasi. Durasi 20 dtk dan jendela verifikasi 15 dtk adalah usulan tim yang akan divalidasi bersama klinisi dan Problem Owner.</p>
+    <p>Data pasien memakai struktur siap integrasi SIMRS/RME (nomor RM, kode ICD-10, nomor SEP, status kunjungan). Semua nama dan nomor di layar fiktif. Belum diuji pada manusia dan bukan alat diagnosis.</p>
+  </div>
+</div>
+
+<script id="engine">
+/* SiagaBed engine: model sinyal pad MI + pengolahan sinyal + mesin aturan. Tanpa DOM. */
+(function (root) {
+  'use strict';
+  const FS = 25, DT = 1 / FS;
+  const CFG = {
+    apnea: 20, verify: 15, effGap: 10,
+    holdWarn: 120, holdCrit: 60, holdNorm: 30, holdDemo: 10,
+    sqiHold: 0.5, sqiRelease: 0.6,
+    rrWarnLow: 10, rrWarnHigh: 20, rrCritLow: 8, rrCritHigh: 30,
+    lpFc: 1.0, hpFc: 0.05, quant: 5
+  };
+
+  function makeRng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function gauss(rng) {
+    let u = 0;
+    while (u === 0) u = rng();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
+  }
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  function median(arr) {
+    if (!arr.length) return NaN;
+    const s = arr.slice().sort((a, b) => a - b), m = s.length >> 1;
+    return s.length % 2 ? s[m] : 0.5 * (s[m - 1] + s[m]);
+  }
+
+  /* Biquad RBJ, direct form II transposed */
+  class Biquad {
+    constructor(type, fc, q) {
+      const w0 = 2 * Math.PI * fc / FS, cw = Math.cos(w0), al = Math.sin(w0) / (2 * q), a0 = 1 + al;
+      const lp = type === 'lp';
+      const b0 = lp ? (1 - cw) / 2 : (1 + cw) / 2, b1 = lp ? 1 - cw : -(1 + cw);
+      this.b0 = b0 / a0; this.b1 = b1 / a0; this.b2 = b0 / a0;
+      this.a1 = -2 * cw / a0; this.a2 = (1 - al) / a0;
+      this.s1 = 0; this.s2 = 0;
+    }
+    step(x) {
+      const y = this.b0 * x + this.s1;
+      this.s1 = this.b1 * x - this.a1 * y + this.s2;
+      this.s2 = this.b2 * x - this.a2 * y;
+      return y;
+    }
+    reset(u) { /* keadaan tunak untuk masukan konstan u */
+      const y = u * (this.b0 + this.b1 + this.b2) / (1 + this.a1 + this.a2);
+      this.s2 = this.b2 * u - this.a2 * y;
+      this.s1 = this.b1 * u - this.a1 * y + this.s2;
+      return y;
+    }
+  }
+
+  class Hampel {
+    constructor(k, nsig) { this.k = k; this.n = 2 * k + 1; this.nsig = nsig; this.buf = []; }
+    step(x) {
+      const b = this.buf;
+      b.push(x);
+      if (b.length > this.n) b.shift();
+      if (b.length < this.n) return x;
+      const c = b[this.k], med = median(b);
+      const mad = 1.4826 * median(b.map(v => Math.abs(v - med)));
+      return Math.abs(c - med) > this.nsig * Math.max(mad, 4) ? med : c;
+    }
+    reset() { this.buf = []; }
+  }
+
+  const INSP = 0.4;
+  function shape(p) {
+    return p < INSP ? 0.5 - 0.5 * Math.cos(Math.PI * p / INSP)
+                    : 0.5 + 0.5 * Math.cos(Math.PI * (p - INSP) / (1 - INSP));
+  }
+  function gaspShape(dt) {
+    if (dt < 0) return 0;
+    if (dt < 0.5) return 0.5 - 0.5 * Math.cos(Math.PI * dt / 0.5);
+    if (dt < 1.6) return 0.5 + 0.5 * Math.cos(Math.PI * (dt - 0.5) / 1.1);
+    return -1;
+  }
+
+  /* Model sinyal: frekuensi resonansi pad (Hz) yang dibaca hub */
+  class PatientSim {
+    constructor(o, rng) {
+      this.rng = rng;
+      this.fEmpty = o.fEmpty; this.delta = o.delta; this.amp = o.amp; this.noise = o.noise || 5;
+      this.present = o.present !== false; this.connected = true; this.spont = o.spontaneous !== false;
+      this.rr = o.rr; this.rrTarget = o.rr; this.rrRate = 0.2;
+      this.mode = 'normal'; this.held = false; this.pauseUntil = 0; this.pausePending = 0;
+      this.phase = rng(); this.cycRR = o.rr; this.cycAmp = 1;
+      this.gaspNext = 0; this.gaspT0 = -1; this.gaspAmp = 1;
+      this.motionT0 = 0; this.motionUntil = 0; this.motionAmp = 0; this.m1 = 0; this.m2 = 0; this.motionEnd = false;
+      this.posOffset = 0; this.drift = 0; this.driftRate = 0; this.leaveAt = 0;
+      this.nextSpike = 5 + rng() * 40;
+      this.nextMotion = 150 + rng() * 360;
+      this.nextPause = 100 + rng() * 260;
+      this.lastPeakT = -1; this.lastGaspPeakT = -1; this.prevPhase = this.phase;
+    }
+    ampFor(rr) { return clamp(Math.sqrt(14 / Math.max(rr, 1)), 0.6, 1.45); }
+    newCycle(k) {
+      this.cycRR = this.rr * (1 + 0.035 * gauss(this.rng));
+      this.cycAmp = k * (1 + 0.07 * gauss(this.rng));
+    }
+    startMotion(t, dur, amp) { this.motionT0 = t; this.motionUntil = t + dur; this.motionAmp = amp; this.motionEnd = true; }
+    step(t) {
+      const r = this.rng;
+      if (this.rr !== this.rrTarget) {
+        const d = this.rrTarget - this.rr, s = this.rrRate * DT;
+        this.rr = Math.abs(d) <= s ? this.rrTarget : this.rr + Math.sign(d) * s;
+      }
+      if (this.spont && this.present && this.connected) {
+        if (t >= this.nextMotion) { this.startMotion(t, 3 + r() * 5, 350 + r() * 300); this.nextMotion = t + 200 + r() * 420; }
+        if (t >= this.nextPause) { if (this.mode === 'normal' && !this.held) this.pausePending = 6 + r() * 5; this.nextPause = t + 130 + r() * 300; }
+      }
+      if (this.leaveAt && t >= this.leaveAt) { this.present = false; this.leaveAt = 0; }
+
+      let br = 0;
+      if (this.present) {
+        if (this.held) {
+          if (this.mode === 'normal' && t >= this.pauseUntil) { this.held = false; this.phase = 0; this.newCycle(1.15); }
+        } else {
+          this.prevPhase = this.phase;
+          this.phase += DT * this.cycRR / 60;
+          if (this.prevPhase < INSP && this.phase >= INSP) this.lastPeakT = t;
+          if (this.phase >= 1) {
+            this.phase -= 1;
+            if (this.mode !== 'normal') {
+              this.held = true; this.phase = 0;
+              if (this.mode === 'gasp') this.gaspNext = t + 10.5 + r() * 6;
+            } else if (this.pausePending) {
+              this.held = true; this.phase = 0; this.pauseUntil = t + this.pausePending; this.pausePending = 0;
+            } else this.newCycle(1);
+          }
+        }
+        if (!this.held) br = this.cycAmp * this.ampFor(this.rr) * shape(this.phase);
+        if (this.mode === 'gasp' && this.held && t >= this.gaspNext) {
+          this.gaspT0 = t; this.gaspAmp = 0.9 + r() * 0.4; this.gaspNext = t + 10.5 + r() * 7.5;
+          this.lastGaspPeakT = t + 0.5;
+        }
+        if (this.gaspT0 >= 0) {
+          const g = gaspShape(t - this.gaspT0);
+          if (g < 0) this.gaspT0 = -1; else br += this.gaspAmp * g;
+        }
+      }
+
+      let m = 0;
+      if (t < this.motionUntil) {
+        const env = Math.min(1, (t - this.motionT0) / 0.4, (this.motionUntil - t) / 0.4);
+        this.m1 = 0.82 * this.m1 + 0.18 * gauss(r);
+        this.m2 = 0.93 * this.m2 + 0.21 * gauss(r);
+        m = env * this.motionAmp * (1.6 * this.m1 + this.m2);
+      } else if (this.motionEnd) {
+        this.motionEnd = false; this.m1 = 0; this.m2 = 0;
+        if (this.present) this.posOffset = clamp(this.posOffset + gauss(r) * 0.035 * this.delta, -0.12 * this.delta, 0.12 * this.delta);
+      }
+      /* drift termal osilator: halus, laju berubah pelan (puluhan–ratusan Hz per menit) */
+      this.driftRate += (-this.driftRate / 60) * DT + 0.25 * Math.sqrt(DT) * gauss(r);
+      this.drift += (this.driftRate - this.drift / 900) * DT;
+
+      let f = this.fEmpty + this.drift + m + this.noise * gauss(r);
+      if (this.present) f -= this.delta + this.posOffset + this.amp * br;
+      if (t >= this.nextSpike) { f += (r() < 0.5 ? -1 : 1) * (150 + r() * 250); this.nextSpike = t + 15 + r() * 45; }
+      f = Math.round(f / CFG.quant) * CFG.quant;
+      return this.connected ? f : 0;
+    }
+  }
+
+  /* Hub: pengolahan sinyal + mesin aturan untuk satu bed */
+  class BedMonitor {
+    constructor(cal, o) {
+      o = o || {};
+      this.calEmpty = cal.empty; this.calOcc = cal.occ; this.delta = cal.empty - cal.occ;
+      this.hampel = new Hampel(3, 3);
+      this.lp1 = new Biquad('lp', CFG.lpFc, 0.5411961);
+      this.lp2 = new Biquad('lp', CFG.lpFc, 1.3065630);
+      this.hp = new Biquad('hp', CFG.hpFc, Math.SQRT1_2);
+      this.present = o.present !== false;
+      this.dc = this.present ? this.delta : 0;
+      this.needInit = true; this.fault = false; this.faultCnt = 0; this.okCnt = 0;
+      this.prevY = null; this.dRing = new Float64Array(FS); this.dIdx = 0; this.dSum = 0;
+      this.quietRef = o.noiseRef || 7.5; this.sqi = 1; this.motionIdx = 1;
+      this.held = false; this.heldSince = 0; this.heldOk = 0; this.heldLong = false;
+      this.absCnt = 0; this.preCnt = 0;
+      this.resetDetector(0, 0);
+      this.refAmp = 0; this.ampHist = []; this.breaths = []; this.intervals = [];
+      this.lastDet = null; this.effStreak = 0; this.h = 6; this.pending = null; this.resetT = 0;
+      this.lastEffT = 0; this.apneaSec = 0;
+      this.rr = null; this.rrStage = 'stabil';
+      this.critT = 0; this.warnT = 0; this.ncwT = 0; this.normT = 0; this.secAcc = 0; this.trendAcc = 0;
+      this.alarm = 'none'; this.praT = 0; this.cbT = 0; this.cbSource = ''; this.praSince = 0;
+      this.demo = true; this.events = [];
+      this.N = FS * 30; this.head = 0;
+      this.bufX = new Float32Array(this.N).fill(NaN);
+      this.bufB = new Float32Array(this.N).fill(NaN);
+      this.bufH = new Uint8Array(this.N);
+      this.lastT = 0; this.lastF = 0; this.lastX = NaN;
+      this.trend = [];
+    }
+    emit(t, type, data) { this.events.push({ t, type, data: data || {} }); }
+    resetDetector(v, t) { this.dmode = 'max'; this.ext = v; this.extT = t; this.trV = v; this.trT = t; }
+    resetChain(y, t) {
+      this.lp1.reset(y); this.lp2.reset(y); this.hp.reset(y);
+      this.resetDetector(0, t);
+      this.intervals = []; this.lastDet = null; this.effStreak = 0; this.pending = null; this.resetT = t;
+    }
+    push(x, b, held, t) {
+      this.bufX[this.head] = x; this.bufB[this.head] = b; this.bufH[this.head] = held;
+      this.head = (this.head + 1) % this.N; this.lastT = t;
+    }
+    status() {
+      if (this.alarm === 'cb') return 'codeblue';
+      if (this.alarm === 'pra') return 'pra';
+      if (this.fault || this.heldLong) return 'teknis';
+      if (!this.present) return 'kosong';
+      if (this.held) return 'ditahan';
+      return this.rrStage;
+    }
+    step(f, t) {
+      const valid = f > 1e6;
+      if (!valid) {
+        this.okCnt = 0;
+        if (!this.fault && ++this.faultCnt >= 15) { this.fault = true; this.rr = null; this.emit(t, 'teknis'); }
+      } else {
+        this.faultCnt = 0;
+        if (this.fault && ++this.okCnt >= 25) { this.fault = false; this.needInit = true; this.emit(t, 'teknis_pulih'); }
+      }
+      if (this.fault || !valid) {
+        this.lastF = valid ? f : 0; this.lastX = NaN;
+        this.push(NaN, NaN, 1, t);
+        this.rules(t, false);
+        return;
+      }
+      const x = this.calEmpty - f;
+      const y = this.hampel.step(x);
+      if (this.needInit) {
+        this.needInit = false; this.hampel.reset(); this.prevY = y;
+        this.dc = y; this.resetChain(y, t); this.lastEffT = t;
+      }
+      /* SQI dari energi beda-pertama (gangguan), bukan dari ada-tidaknya napas */
+      const d = this.prevY === null ? 0 : y - this.prevY;
+      this.prevY = y;
+      const old = this.dRing[this.dIdx];
+      this.dRing[this.dIdx] = d * d; this.dSum += d * d - old; this.dIdx = (this.dIdx + 1) % FS;
+      if (this.dSum < 0) this.dSum = 0;
+      const rmsD = Math.sqrt(this.dSum / FS), idx = rmsD / this.quietRef;
+      if (idx < 1.6 && !this.held) this.quietRef += (rmsD - this.quietRef) * (DT / 30);
+      const sqiRaw = clamp(1.25 - 0.25 * idx, 0, 1);
+      this.sqi = sqiRaw < this.sqi ? sqiRaw : this.sqi + (sqiRaw - this.sqi) * DT;
+      this.motionIdx = idx;
+      if (!this.held) {
+        if (this.sqi < CFG.sqiHold) { this.held = true; this.heldSince = t; this.heldOk = 0; this.heldLong = false; }
+      } else {
+        if (this.sqi >= CFG.sqiRelease) { this.heldOk += DT; if (this.heldOk >= 2) this.endHold(y, t); }
+        else this.heldOk = 0;
+        if (this.held && !this.heldLong && t - this.heldSince > 60) { this.heldLong = true; this.emit(t, 'tahan_lama'); }
+      }
+      /* Kehadiran: level DC terhadap kalibrasi dua titik */
+      this.dc += (y - this.dc) * (DT / 2);
+      const score = this.dc / this.delta;
+      if (!this.held) {
+        if (this.present) {
+          this.absCnt = score < 0.35 ? this.absCnt + DT : 0;
+          if (this.absCnt >= 3) {
+            this.present = false; this.absCnt = 0; this.rr = null;
+            this.rrStage = 'stabil'; this.critT = this.warnT = this.ncwT = this.normT = 0;
+            this.emit(t, 'kosong');
+          }
+        } else {
+          this.preCnt = score > 0.6 ? this.preCnt + DT : 0;
+          if (this.preCnt >= 3) {
+            this.present = true; this.preCnt = 0; this.resetChain(y, t); this.lastEffT = t;
+            this.emit(t, 'kembali');
+          }
+        }
+      }
+      const b = this.hp.step(this.lp2.step(this.lp1.step(y)));
+      const monitoring = this.present && !this.held;
+      if (monitoring) this.detect(b, t);
+      this.lastF = f; this.lastX = x;
+      this.push(x, b, this.held ? 1 : 0, t);
+      this.rules(t, monitoring);
+    }
+    endHold(y, t) {
+      const dur = t - this.heldSince;
+      this.held = false; this.heldLong = false;
+      this.resetChain(y, t);
+      if (this.alarm === 'none') this.lastEffT = t;
+      if (dur >= 10) this.emit(t, 'tahan_selesai', { dur });
+    }
+    detect(b, t) {
+      const sigLp = this.quietRef / Math.SQRT2 * 0.29;
+      const h = Math.max(0.35 * this.refAmp, 6 * sigLp, 6);
+      this.h = h;
+      if (this.dmode === 'max') {
+        if (b > this.ext) { this.ext = b; this.extT = t; }
+        else if (b < this.ext - h) {
+          const pv = this.ext, pt = this.extT, rise = pv - this.trV, riseDur = pt - this.trT, fallDur = t - pt;
+          this.dmode = 'min'; this.ext = b; this.extT = t;
+          if (rise >= h && riseDur >= 0.3 && riseDur <= 20 && fallDur <= 4) this.onBreath(pt, pv, rise, t);
+        }
+      } else {
+        if (b < this.ext) { this.ext = b; this.extT = t; }
+        else if (b > this.ext + h) { this.trV = this.ext; this.trT = this.extT; this.dmode = 'max'; this.ext = b; this.extT = t; }
+      }
+    }
+    onBreath(pt, pv, amp, t) {
+      const prev = this.lastDet;
+      const ampOK = !this.refAmp || amp >= 0.5 * this.refAmp;
+      let eff = false;
+      if (ampOK) {
+        if (prev && prev.ampOK && pt - prev.t <= CFG.effGap) eff = true;       /* napas teratur */
+        else if (!prev && pt - this.resetT <= CFG.effGap) eff = true;          /* napas pertama setelah reset */
+      }
+      /* napas tunggal setelah jeda: tunggu konfirmasi napas berikutnya maks. 12 dtk.
+         Batas waktunya tetap dari napas tunggal pertama, jadi gasping berulang tidak menunda alarm. */
+      if (eff) this.pending = null;
+      else if (ampOK && !this.pending) this.pending = { t: pt, until: pt + CFG.effGap + 2 };
+      this.lastDet = { t: pt, amp, ampOK, eff };
+      this.breaths.push({ t: pt, v: pv, amp, eff });
+      if (this.breaths.length > 60) this.breaths.shift();
+      if (eff || !this.refAmp) {
+        this.ampHist.push(amp);
+        if (this.ampHist.length > 9) this.ampHist.shift();
+        this.refAmp = median(this.ampHist);
+      }
+      if (eff) {
+        if (pt > this.lastEffT) this.lastEffT = pt;
+        this.effStreak = prev && prev.eff ? this.effStreak + 1 : 1;
+      } else this.effStreak = 0;
+      if (prev && pt - prev.t <= 15) {
+        this.intervals.push(pt - prev.t);
+        if (this.intervals.length > 6) this.intervals.shift();
+      }
+    }
+    rules(t, monitoring) {
+      if (!monitoring && this.alarm === 'none') this.lastEffT = t;
+      this.apneaSec = Math.max(0, t - this.lastEffT);
+      if (this.pending && t > this.pending.until) this.pending = null;
+      if (this.alarm === 'none' && monitoring && this.apneaSec >= CFG.apnea && !this.pending) {
+        this.alarm = 'pra'; this.praT = t; this.praSince = this.lastEffT;
+        this.emit(t, 'pra', { since: this.lastEffT });
+      }
+      if (this.alarm === 'pra') {
+        if (monitoring && this.effStreak >= 2 && this.lastEffT > this.praT) {
+          this.alarm = 'none'; this.emit(t, 'pra_selesai');
+        } else if (t - this.praT >= CFG.verify) {
+          this.alarm = 'cb'; this.cbT = t; this.cbSource = 'otomatis';
+          this.emit(t, 'codeblue', { source: 'otomatis', since: this.praSince });
+        }
+      }
+      this.secAcc += DT;
+      if (this.secAcc >= 1 - 1e-9) { this.secAcc -= 1; this.perSecond(t, monitoring); }
+    }
+    perSecond(t, monitoring) {
+      const last = this.lastDet;
+      if (monitoring && this.intervals.length >= 3 && last && t - last.t <= Math.max(12, 2.2 * median(this.intervals))) {
+        this.rr = 60 / median(this.intervals.slice(-5));
+      } else if (!monitoring || !last || t - last.t > 12) {
+        this.rr = null;
+      }
+      const hw = this.demo ? CFG.holdDemo : CFG.holdWarn;
+      const hc = this.demo ? CFG.holdDemo : CFG.holdCrit;
+      const hn = this.demo ? CFG.holdDemo : CFG.holdNorm;
+      if (monitoring && this.rr !== null) {
+        const rr = Math.round(this.rr);
+        const crit = rr <= CFG.rrCritLow || rr >= CFG.rrCritHigh;
+        const warn = rr <= CFG.rrWarnLow || rr > CFG.rrWarnHigh;
+        this.critT = crit ? this.critT + 1 : 0;
+        this.warnT = warn ? this.warnT + 1 : 0;
+        this.ncwT = warn && !crit ? this.ncwT + 1 : 0;
+        this.normT = warn ? 0 : this.normT + 1;
+        let s = this.rrStage;
+        if (this.critT >= hc) s = 'kritis';
+        else if (s === 'stabil' && this.warnT >= hw) s = 'waspada';
+        else if (s === 'kritis' && this.ncwT >= hw) s = 'waspada';
+        if (s !== 'stabil' && this.normT >= hn) s = 'stabil';
+        if (s !== this.rrStage) { const prev = this.rrStage; this.rrStage = s; this.emit(t, s, { rr, prev }); }
+      }
+      this.trendAcc += 1;
+      if (this.trendAcc >= 2) {
+        this.trendAcc = 0;
+        this.trend.push({ t, rr: monitoring && this.rr !== null ? Math.round(this.rr) : null });
+        if (this.trend.length > 300) this.trend.shift();
+      }
+    }
+    cancelPra(t) { if (this.alarm !== 'pra') return; this.alarm = 'none'; this.lastEffT = t; this.emit(t, 'pra_batal'); }
+    confirmCB(t) { if (this.alarm !== 'pra') return; this.alarm = 'cb'; this.cbT = t; this.cbSource = 'perawat'; this.emit(t, 'codeblue', { source: 'perawat' }); }
+    manualCB(t) { if (this.alarm === 'cb') return; this.alarm = 'cb'; this.cbT = t; this.cbSource = 'manual'; this.emit(t, 'codeblue', { source: 'manual' }); }
+    closeCB(t) { if (this.alarm !== 'cb') return; this.alarm = 'none'; this.lastEffT = t; this.emit(t, 'cb_selesai'); }
+  }
+
+  class Ward {
+    constructor(roster, seed) {
+      seed = seed || 1;
+      this.t = 0; this.demo = true; this.listeners = [];
+      this.beds = roster.map((r, i) => {
+        const rng = makeRng(seed * 31 + i * 7919 + 17);
+        const fEmpty = 4.18e6 + Math.round(rng() * 50000);
+        const delta = 2400 + Math.round(rng() * 800);
+        const present = r.present !== false;
+        const sim = new PatientSim({ fEmpty, delta, amp: r.amp, rr: r.rr, noise: r.noise, present, spontaneous: r.spontaneous }, rng);
+        const cal = { empty: fEmpty + Math.round((rng() - 0.5) * 60), occ: fEmpty - delta + Math.round((rng() - 0.5) * 60) };
+        const mon = new BedMonitor(cal, { present, noiseRef: 7.5 });
+        return Object.assign({}, r, { baseRR: r.rr, sim, mon, cal });
+      });
+    }
+    byId(id) { return this.beds.find(b => b.id === id); }
+    on(fn) { this.listeners.push(fn); }
+    emit(bed, ev) { for (const fn of this.listeners) fn(Object.assign({}, ev, { bed })); }
+    flush(b) { const q = b.mon.events; while (q.length) this.emit(b, q.shift()); }
+    step() {
+      this.t += DT;
+      for (const b of this.beds) { b.mon.step(b.sim.step(this.t), this.t); if (b.mon.events.length) this.flush(b); }
+    }
+    setDemo(v) { this.demo = v; for (const b of this.beds) b.mon.demo = v; }
+    scenario(b, name, o) {
+      o = o || {};
+      const s = b.sim, t = this.t;
+      const breathe = () => { s.mode = 'normal'; s.pauseUntil = 0; s.pausePending = 0; };
+      switch (name) {
+        case 'normal': breathe(); s.rrTarget = b.baseRR; s.rrRate = o.rate || 1.5; break;
+        case 'perburukan': breathe(); s.rrTarget = 32; s.rrRate = o.rate || 0.2; break;
+        case 'lambat': breathe(); s.rrTarget = 7; s.rrRate = o.rate || 0.15; break;
+        case 'apnea': s.mode = 'apnea'; break;
+        case 'gasp': s.mode = 'gasp'; break;
+        case 'gerak': s.startMotion(t, o.dur || 20, 600); break;
+        case 'turun': s.startMotion(t, 4, 550); s.leaveAt = t + 3.6; break;
+        case 'naik':
+          s.present = true; s.leaveAt = 0; breathe(); s.held = false; s.phase = 0;
+          s.rr = s.rrTarget = b.baseRR; s.newCycle(1); s.posOffset = gauss(s.rng) * 0.03 * s.delta;
+          s.startMotion(t, 3, 500); break;
+        case 'cabut': s.connected = false; break;
+        case 'pasang': s.connected = true; break;
+        case 'manual': b.mon.manualCB(t); break;
+      }
+      if (name !== 'manual') this.emit(b, { t, type: 'skenario', data: { name } });
+      this.flush(b);
+    }
+    cancel(b) { b.mon.cancelPra(this.t); this.flush(b); }
+    confirm(b) { b.mon.confirmCB(this.t); this.flush(b); }
+    close(b) {
+      b.mon.closeCB(this.t); this.flush(b);
+      if (b.sim.present && b.sim.mode !== 'normal') this.scenario(b, 'normal');
+    }
+  }
+
+  root.SiagaEngine = { FS, DT, CFG, makeRng, gauss, median, clamp, Biquad, Hampel, PatientSim, BedMonitor, Ward };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+
+<script>
+(function () {
+  'use strict';
+  const E = window.SiagaEngine, FS = E.FS, CFG = E.CFG;
+  const $ = (s, el) => (el || document).querySelector(s);
+  const icon = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const nf0 = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+  const nf2 = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pad2 = n => String(n).padStart(2, '0');
+  const hms = d => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const dshort = d => `${d.getDate()} ${BLN[d.getMonth()]}`;
+  const mhz = f => { const s = (f / 1e6).toFixed(6).replace('.', ','); return s.slice(0, -3) + ' ' + s.slice(-3); };
+
+  const STATUS = {
+    stabil:   { label: 'Stabil',       icon: 'i-check' },
+    waspada:  { label: 'Waspada',      icon: 'i-warn' },
+    kritis:   { label: 'Kritis',       icon: 'i-crit' },
+    pra:      { label: 'Pra-alarm',    icon: 'i-alarm' },
+    codeblue: { label: 'Code Blue',    icon: 'i-cb' },
+    ditahan:  { label: 'Ditahan',      icon: 'i-hold' },
+    kosong:   { label: 'Bed kosong',   icon: 'i-bed' },
+    teknis:   { label: 'Alarm teknis', icon: 'i-plug' },
+    info:     { label: 'Info',         icon: 'i-dot' }
+  };
+  const pillHTML = (s, text) => `<span class="pill" data-s="${s}">${icon(STATUS[s].icon)}<span>${text || STATUS[s].label}</span></span>`;
+
+  /* Data pasien. Props siap SIMRS/RME: no_rm, icd10_code, sep_number, visit_status (semua fiktif). */
+  const ROSTER = [
+    { id: '301-A', short: 'Pneumonia', room: '301', bed: 'A', name: 'Tn. S.H.', age: 67, dx: 'Pneumonia komunitas', no_rm: '00-21-47-13', icd10_code: 'J18.9', sep_number: '1305R0011026V004213', visit_status: 'Rawat inap, hari ke-3', rr: 16, amp: 54, noise: 5 },
+    { id: '301-B', short: 'Pascaoperasi', room: '301', bed: 'B', name: 'Ny. R.W.', age: 54, dx: 'Pascalaparotomi, hari ke-1', no_rm: '00-31-08-52', icd10_code: 'Z48.8', sep_number: '1305R0011026V004218', visit_status: 'Rawat inap, hari ke-2', rr: 14, amp: 50, noise: 4.5 },
+    { id: '301-C', short: 'Gagal jantung', room: '301', bed: 'C', name: 'Tn. A.M.', age: 72, dx: 'Gagal jantung kongestif', no_rm: '00-18-66-04', icd10_code: 'I50.0', sep_number: '1305R0011026V004197', visit_status: 'Rawat inap, hari ke-5', rr: 19, amp: 40, noise: 5 },
+    { id: '301-D', room: '301', bed: 'D', name: null, age: null, dx: null, no_rm: null, icd10_code: null, sep_number: null, visit_status: 'Bed siap pakai', rr: 15, amp: 50, noise: 5, present: false },
+    { id: '302-A', short: 'Selulitis', room: '302', bed: 'A', name: 'Ny. L.K.', age: 45, dx: 'Diabetes tipe 2, selulitis', no_rm: '00-27-91-35', icd10_code: 'L03.1', sep_number: '1305R0011026V004225', visit_status: 'Rawat inap, hari ke-2', rr: 13, amp: 58, noise: 5 },
+    { id: '302-B', short: 'Stroke', room: '302', bed: 'B', name: 'Tn. B.P.', age: 81, dx: 'Stroke iskemik', no_rm: '00-09-54-70', icd10_code: 'I63.9', sep_number: '1305R0011026V004189', visit_status: 'Rawat inap, hari ke-4', rr: 12, amp: 46, noise: 5.5 },
+    { id: '302-C', short: 'PPOK', room: '302', bed: 'C', name: 'Ny. D.A.', age: 60, dx: 'PPOK eksaserbasi akut', no_rm: '00-14-33-28', icd10_code: 'J44.1', sep_number: '1305R0011026V004230', visit_status: 'Rawat inap, hari ke-1', rr: 23, amp: 38, noise: 5 },
+    { id: '302-D', short: 'DBD', room: '302', bed: 'D', name: 'Tn. Y.T.', age: 38, dx: 'Demam berdarah dengue', no_rm: '00-35-12-89', icd10_code: 'A91', sep_number: '1305R0011026V004236', visit_status: 'Rawat inap, hari ke-2', rr: 18, amp: 52, noise: 4.5 }
+  ];
+
+  const ward = new E.Ward(ROSTER, 20261018);
+  const PRE = 600;                                   /* detik riwayat sebelum dasbor dibuka */
+  let bootWall = Date.now();
+  const wallAt = t => new Date(bootWall + (t - PRE) * 1000);
+  let booting = true;
+  let selected = '301-B';
+  let soundOn = false;
+  let alarmCount = 0, cbCount = 0;
+  const bedLabel = b => `${b.room}-${b.bed}`;
+  const bedName = b => b.name || (b.sim.present ? 'Pasien baru' : 'Bed kosong');
+  const initials = b => b.name ? b.name.replace(/^(Tn|Ny|Nn|An)\.\s*/, '').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() : '';
+  const avHTML = b => b.name ? initials(b) : (b.sim.present ? 'PB' : icon('i-bed'));
+
+  /* ---------- Log kejadian ---------- */
+  const logBody = $('#log-body');
+  const SCEN_LABEL = {
+    normal: 'Napas normal', perburukan: 'Perburukan bertahap (RR → 32/mnt)', lambat: 'Napas melambat (RR → 7/mnt)',
+    apnea: 'Henti napas dimulai', gasp: 'Henti napas dengan gasping', gerak: 'Pasien bergerak',
+    turun: 'Pasien turun dari bed', naik: 'Pasien berbaring di bed', cabut: 'Konektor pad dicabut', pasang: 'Konektor pad dipasang'
+  };
+  const holdText = kind => ward.demo ? '10 dtk (mode demo)' : (kind === 'crit' ? '1 mnt' : '2 mnt');
+  function describe(ev) {
+    const d = ev.data || {};
+    switch (ev.type) {
+      case 'waspada': return { s: 'waspada', g: 'status', text: d.prev === 'kritis' ? 'Turun ke Waspada' : 'Waspada', det: `RR ${d.rr}/mnt bertahan ${holdText('warn')}`, src: 'Pad MI' };
+      case 'kritis': return { s: 'kritis', g: 'status', text: 'Kritis', det: `RR ${d.rr}/mnt bertahan ${holdText('crit')}`, src: 'Pad MI' };
+      case 'stabil': return { s: 'stabil', g: 'status', text: 'Kembali stabil', det: `RR ${d.rr}/mnt`, src: 'Pad MI' };
+      case 'pra': return { s: 'pra', g: 'alarm', text: 'Pra-alarm', det: 'Tidak ada napas efektif 20 dtk; verifikasi perawat 15 dtk', src: 'Pad MI' };
+      case 'pra_batal': return { s: 'stabil', g: 'alarm', text: 'Pra-alarm dibatalkan', det: 'Perawat menyatakan pasien aman; pemantauan berlanjut', src: 'Perawat' };
+      case 'pra_selesai': return { s: 'stabil', g: 'alarm', text: 'Pra-alarm berhenti', det: 'Napas efektif terdeteksi kembali', src: 'Pad MI' };
+      case 'codeblue': {
+        const lat = d.since != null ? ` · ${Math.round(ev.t - d.since)} dtk sejak napas efektif terakhir` : '';
+        const map = { otomatis: ['Otomatis, pra-alarm tidak dibatalkan' + lat, 'Pad MI'], perawat: ['Dikonfirmasi perawat dari pra-alarm', 'Perawat'], manual: ['Tombol Code Blue manual di bed ditekan', 'Tombol manual'] };
+        const m = map[d.source] || map.otomatis;
+        return { s: 'codeblue', g: 'alarm', text: 'Code Blue', det: m[0], src: m[1] };
+      }
+      case 'cb_selesai': return { s: 'stabil', g: 'alarm', text: 'Code Blue ditutup', det: 'Ditandai selesai oleh Tim Code Blue', src: 'Tim Code Blue' };
+      case 'kosong': return { s: 'kosong', g: 'teknis', text: 'Bed kosong', det: 'Pasien tidak terdeteksi di pad; alarm klinis dinonaktifkan', src: 'Pad MI' };
+      case 'kembali': return { s: 'info', g: 'teknis', text: 'Pasien terdeteksi', det: 'Pemantauan napas dimulai lagi', src: 'Pad MI' };
+      case 'teknis': return { s: 'teknis', g: 'teknis', text: 'Alarm teknis', det: 'Sinyal pad hilang; periksa konektor', src: 'Hub' };
+      case 'teknis_pulih': return { s: 'info', g: 'teknis', text: 'Sinyal pulih', det: 'Konektor terpasang; pemantauan berlanjut', src: 'Hub' };
+      case 'tahan_lama': return { s: 'teknis', g: 'teknis', text: 'Alarm teknis', det: 'Sinyal tidak andal lebih dari 60 dtk', src: 'Hub' };
+      case 'tahan_selesai': return { s: 'ditahan', g: 'status', text: 'Keluaran ditahan', det: `${Math.round(d.dur)} dtk karena gerakan; tanpa alarm`, src: 'Pad MI' };
+      case 'skenario': return { s: 'info', g: 'sim', text: 'Simulasi', det: SCEN_LABEL[d.name] || d.name, src: 'Simulasi' };
+      case 'mulai': return { s: 'info', g: 'sim', text: 'Pemantauan dimulai', det: d.text, src: 'Sistem' };
+    }
+    return null;
+  }
+  const FU_ICON = { ok: 'i-check-c', wait: 'i-clock', esc: 'i-esc', info: 'i-dot' };
+  const setFollow = (td, kind, text) => { td.innerHTML = `<span class="fu ${kind}">${icon(FU_ICON[kind])}${text}</span>`; };
+  const openRows = new Map();
+  const filt = { g: 'all', src: 'all' };
+  const rowVisible = tr => (filt.g === 'all' || tr.dataset.g === filt.g) && (filt.src === 'all' || tr.dataset.src === filt.src);
+  function applyFilter() {
+    let n = 0;
+    for (const tr of logBody.children) { const v = rowVisible(tr); tr.hidden = !v; if (v) n++; }
+    $('#log-empty').hidden = n > 0;
+  }
+  function addLog(ev) {
+    const m = describe(ev);
+    if (!m) return;
+    const b = ev.bed, when = wallAt(ev.t);
+    const tr = document.createElement('tr');
+    tr.dataset.g = m.g; tr.dataset.src = m.src;
+    const who = b
+      ? `<div class="who"><span class="av">${avHTML(b)}</span><span><b>${esc(bedName(b))}</b><small>${bedLabel(b)}${b.no_rm ? ' · <span class="nw">RM ' + b.no_rm + '</span>' : ''}</small></span></div>`
+      : `<div class="who"><span class="av">${icon('i-coil')}</span><span><b>Sistem</b><small>8 bed</small></span></div>`;
+    tr.innerHTML = `<td>${who}</td><td>${pillHTML(m.s, m.text)}</td><td class="dt">${hms(when)}<small class="dd">${dshort(when)}</small></td><td class="det">${esc(m.det)}</td><td class="src">${m.src}</td><td class="fu-td"></td>`;
+    const fu = tr.querySelector('.fu-td'), id = b ? b.id : '-';
+    const resolve = (key, kind, text) => { const prev = openRows.get(key); if (prev) setFollow(prev, kind, text); openRows.delete(key); };
+    switch (ev.type) {
+      case 'pra': setFollow(fu, 'wait', 'Menunggu verifikasi'); openRows.set(id, fu); alarmCount++; break;
+      case 'codeblue':
+        resolve(id, 'esc', 'Eskalasi ke Code Blue');
+        setFollow(fu, 'wait', 'Tim dipanggil'); openRows.set(id, fu);
+        cbCount++; if (ev.data && ev.data.source === 'manual') alarmCount++;
+        break;
+      case 'pra_batal': resolve(id, 'ok', 'Dibatalkan perawat'); setFollow(fu, 'ok', 'Selesai'); break;
+      case 'pra_selesai': resolve(id, 'ok', 'Napas kembali'); setFollow(fu, 'ok', 'Selesai'); break;
+      case 'cb_selesai': resolve(id, 'ok', 'Ditangani tim'); setFollow(fu, 'ok', 'Selesai'); break;
+      case 'teknis': case 'tahan_lama': setFollow(fu, 'wait', 'Periksa pad'); openRows.set(id + ':t', fu); break;
+      case 'teknis_pulih': resolve(id + ':t', 'ok', 'Konektor dipasang'); setFollow(fu, 'ok', 'Selesai'); break;
+      case 'skenario': case 'mulai': setFollow(fu, 'info', '—'); break;
+      default: setFollow(fu, 'info', 'Tercatat');
+    }
+    tr.hidden = !rowVisible(tr);
+    logBody.insertBefore(tr, logBody.firstChild);
+    while (logBody.children.length > 300) logBody.removeChild(logBody.lastChild);
+    $('#log-empty').hidden = true;
+    if (filt.g !== 'all' || filt.src !== 'all') applyFilter();
+  }
+  $('#sel-g').addEventListener('change', e => { filt.g = e.target.value; applyFilter(); });
+  $('#sel-src').addEventListener('change', e => { filt.src = e.target.value; applyFilter(); });
+
+  /* ---------- Notifikasi ponsel ---------- */
+  const toasts = $('#toasts');
+  const notifHist = [];
+  function toast(s, who, what, det) {
+    notifHist.unshift({ s, who, what, det, at: new Date() });
+    if (notifHist.length > 20) notifHist.pop();
+    const t = document.createElement('div');
+    t.className = 'toast'; t.dataset.s = s;
+    t.innerHTML = `${icon('i-phone')}<div><div class="who2"><span>${who}</span><span>${hms(new Date())}</span></div><div class="what">${what}</div><div class="det">${det}</div></div>`;
+    toasts.insertBefore(t, toasts.firstChild);
+    while (toasts.children.length > 3) toasts.removeChild(toasts.lastChild);
+    setTimeout(() => t.remove(), 7000);
+  }
+  function notify(ev) {
+    const b = ev.bed, where = `Kamar ${b.room} · Bed ${b.bed}`, d = ev.data || {};
+    if (ev.type === 'kritis') { toast('kritis', 'Ponsel perawat', `Kritis · ${where}`, `RR ${d.rr}/mnt`); beep('kritis'); }
+    if (ev.type === 'pra') toast('pra', 'Ponsel perawat', `Pra-alarm · ${where}`, 'Tidak ada napas efektif 20 dtk. Verifikasi dalam 15 dtk.');
+    if (ev.type === 'codeblue') toast('codeblue', 'Ponsel Tim Code Blue', `CODE BLUE · ${where}`, d.source === 'manual' ? 'Tombol manual ditekan' : d.source === 'perawat' ? 'Dikonfirmasi perawat' : 'Aktivasi otomatis');
+    if (ev.type === 'teknis') toast('teknis', 'Ponsel perawat', `Alarm teknis · ${where}`, 'Sinyal pad hilang');
+  }
+  ward.on(ev => { addLog(ev); if (!booting && ev.bed) notify(ev); });
+
+  /* ---------- Suara alarm ---------- */
+  let actx = null, nextBeep = 0;
+  function tone(freq, at, dur) {
+    if (!actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.18, at + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g).connect(actx.destination); o.start(at); o.stop(at + dur + 0.02);
+  }
+  function beep(kind) { if (soundOn && actx && kind === 'kritis') tone(660, actx.currentTime + 0.02, 0.18); }
+  function soundTick() {
+    if (!soundOn || !actx) return;
+    const now = performance.now();
+    if (now < nextBeep) return;
+    const st = ward.beds.map(b => b.mon.status()), t0 = actx.currentTime + 0.02;
+    if (st.includes('codeblue')) { [0, 0.18, 0.36].forEach(k => tone(988, t0 + k, 0.13)); nextBeep = now + 1300; }
+    else if (st.includes('pra')) { [0, 0.25].forEach(k => tone(880, t0 + k, 0.16)); nextBeep = now + 2000; }
+    else nextBeep = now + 500;
+  }
+  function setSound(v) {
+    soundOn = v;
+    if (soundOn && !actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+    if (actx && actx.state === 'suspended') actx.resume();
+    nextBeep = 0;
+  }
+  function setDemo(v) { ward.setDemo(v); }
+
+  /* ---------- Kalender jaga ---------- */
+  const today = new Date();
+  const calState = { y: today.getFullYear(), m: today.getMonth() };
+  function renderCal() {
+    const now = new Date();
+    const first = new Date(calState.y, calState.m, 1);
+    const startDow = (first.getDay() + 6) % 7;
+    const daysIn = new Date(calState.y, calState.m + 1, 0).getDate();
+    const prevDays = new Date(calState.y, calState.m, 0).getDate();
+    let html = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'].map((d, i) => `<span class="dh${i >= 5 ? ' we' : ''}">${d}</span>`).join('');
+    const cells = Math.ceil((startDow + daysIn) / 7) * 7;
+    for (let i = 0; i < cells; i++) {
+      const dn = i - startDow + 1;
+      if (dn < 1) html += `<span class="d out">${prevDays + dn}</span>`;
+      else if (dn > daysIn) html += `<span class="d out">${dn - daysIn}</span>`;
+      else {
+        const isToday = calState.y === now.getFullYear() && calState.m === now.getMonth() && dn === now.getDate();
+        html += `<span class="d${isToday ? ' today' : ''}"${isToday ? ' aria-current="date"' : ''}>${dn}</span>`;
+      }
+    }
+    $('#cal-grid').innerHTML = html;
+    $('#cal-month').textContent = `${BULAN[calState.m]} ${calState.y}`;
+  }
+  $('#cal-prev').addEventListener('click', () => { calState.m--; if (calState.m < 0) { calState.m = 11; calState.y--; } renderCal(); });
+  $('#cal-next').addEventListener('click', () => { calState.m++; if (calState.m > 11) { calState.m = 0; calState.y++; } renderCal(); });
+  renderCal();
+
+  /* ---------- Antrean pantau (panel gelap) ---------- */
+  const queueEl = $('#queue');
+  const qItems = new Map();
+  for (const b of ward.beds) {
+    const li = document.createElement('li');
+    li.className = 'qi'; li.tabIndex = 0; li.setAttribute('role', 'button'); li.dataset.id = b.id;
+    li.innerHTML = `<span class="av"></span><span class="q-txt"><span class="q-name"></span><span class="q-sub"></span></span><span class="q-right"><span class="q-val"></span><span class="node"></span></span>`;
+    li.addEventListener('click', () => select(b.id, true));
+    li.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(b.id, true); } });
+    queueEl.appendChild(li);
+    qItems.set(b.id, { li, av: li.querySelector('.av'), name: li.querySelector('.q-name'), sub: li.querySelector('.q-sub'), val: li.querySelector('.q-val'), node: li.querySelector('.node'), s: '', avh: '' });
+  }
+  const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+  function updateQueue() {
+    for (const b of ward.beds) {
+      const q = qItems.get(b.id), m = b.mon, s = m.status();
+      if (q.s !== s) { q.s = s; q.li.dataset.s = s; q.node.innerHTML = icon(STATUS[s].icon); }
+      const av = avHTML(b);
+      if (q.avh !== av) { q.avh = av; q.av.innerHTML = av; }
+      q.li.setAttribute('aria-current', String(b.id === selected));
+      q.li.setAttribute('aria-label', `${bedName(b)}, kamar ${b.room} bed ${b.bed}, ${STATUS[s].label}`);
+      setText(q.name, bedName(b));
+      setText(q.sub, b.short || (b.sim.present ? 'Belum terdaftar' : 'Siap pakai'));
+      let v, st = '';
+      const rrTxt = m.rr !== null ? `${Math.round(m.rr)}/mnt` : '—';
+      if (s === 'pra') { v = `CB ${Math.max(0, Math.ceil(CFG.verify - (ward.t - m.praT)))} dtk`; st = 'Pra-alarm'; }
+      else if (s === 'codeblue') { v = 'Tim dipanggil'; st = 'Code Blue'; }
+      else if (s === 'kosong') v = 'kosong';
+      else if (s === 'teknis') { v = m.fault ? 'pad lepas' : 'sinyal'; st = 'Teknis'; }
+      else if (s === 'ditahan') v = 'gerak';
+      else { v = rrTxt; if (s === 'waspada') st = 'Waspada'; if (s === 'kritis') st = 'Kritis'; }
+      const vh = `<b>${bedLabel(b)}</b><br>${v}${st ? `<span class="q-st">${st}</span>` : ''}`;
+      if (q.vh !== vh) { q.vh = vh; q.val.innerHTML = vh; }
+    }
+  }
+
+  /* ---------- KPI ---------- */
+  function updateKpis() {
+    const st = ward.beds.map(b => b.mon.status());
+    const monitored = st.filter(s => s !== 'kosong').length;
+    const stable = st.filter(s => s === 'stabil').length;
+    const attention = monitored - stable;
+    const warnN = st.filter(s => s === 'waspada').length;
+    const critN = st.filter(s => s === 'kritis' || s === 'pra' || s === 'codeblue').length;
+    const otherN = attention - warnN - critN;
+    setText($('#sum-n'), String(monitored));
+    setText($('#k-n'), String(monitored));
+    setText($('#k-stable'), `${stable} stabil`);
+    setText($('#k-of'), `dari ${ward.beds.length} bed`);
+    [['a', stable], ['b', warnN], ['c', critN], ['d', otherN]].forEach(([k, n]) => {
+      const seg = $('#k-seg-' + k); seg.style.flexGrow = String(n); seg.hidden = n === 0;
+    });
+    setText($('#k-leg-a'), `stabil ${stable}`);
+    setText($('#k-leg-b'), `waspada ${warnN}`);
+    setText($('#k-leg-c'), `kritis/alarm ${critN}`);
+    setText($('#k-leg-d'), `lainnya ${otherN}`);
+    setText($('#k-alarm'), String(alarmCount));
+    setText($('#k-cb'), `${cbCount} Code Blue`);
+    const alarmOn = st.includes('pra') || st.includes('codeblue');
+    $('#bell-dot').classList.toggle('alarm', alarmOn);
+    $('#rail-dot').hidden = !alarmOn;
+  }
+
+  /* ---------- Strip 'Perlu perhatian' ---------- */
+  const watchEl = $('#watch');
+  const stageSince = new Map();
+  ward.on(ev => {
+    if (!ev.bed) return;
+    if (['waspada', 'kritis', 'teknis', 'tahan_lama'].includes(ev.type)) stageSince.set(ev.bed.id, ev.t);
+    if (['stabil', 'teknis_pulih', 'kosong', 'kembali'].includes(ev.type)) stageSince.delete(ev.bed.id);
+  });
+  const SEV = { kritis: 0, teknis: 1, waspada: 2 };
+  const durTxt = sec => { sec = Math.max(0, Math.floor(sec)); return sec < 60 ? `${sec} dtk` : `${Math.floor(sec / 60)} mnt ${pad2(sec % 60)} dtk`; };
+  let watchKey = null;
+  function updateWatch() {
+    const list = ward.beds.map(b => ({ b, s: b.mon.status() })).filter(x => x.s in SEV).sort((x, y) => SEV[x.s] - SEV[y.s]);
+    const key = list.map(x => x.b.id + ':' + x.s).join('|');
+    if (key !== watchKey) {
+      watchKey = key;
+      if (!list.length) { watchEl.innerHTML = `<span class="watch-ok">${icon('i-check')}Tidak ada bed Waspada, Kritis, atau alarm teknis</span>`; return; }
+      watchEl.innerHTML = `<span class="watch-h">Perlu perhatian</span>` + list.map(x =>
+        `<button class="wchip" type="button" data-s="${x.s}" data-id="${x.b.id}">${icon(STATUS[x.s].icon)}<b>${STATUS[x.s].label}</b><span>${bedLabel(x.b)} · ${esc(bedName(x.b))}</span><span class="wm"></span></button>`).join('');
+      watchEl.querySelectorAll('.wchip').forEach(c => c.addEventListener('click', () => select(c.dataset.id, true)));
+    }
+    for (const x of list) {
+      const el = watchEl.querySelector(`.wchip[data-id="${x.b.id}"] .wm`);
+      if (!el) continue;
+      const m = x.b.mon, since = stageSince.has(x.b.id) ? durTxt(ward.t - stageSince.get(x.b.id)) : '';
+      const what = x.s === 'teknis' ? (m.fault ? 'pad terlepas' : 'sinyal tidak andal') : (m.rr !== null ? `RR ${Math.round(m.rr)}/mnt` : 'RR —');
+      setText(el, since ? `${what} · ${since}` : what);
+    }
+  }
+
+  /* ---------- Banner alarm ---------- */
+  const alertsEl = $('#alerts');
+  const banners = new Map();
+  function makeBanner(b, s) {
+    const el = document.createElement('div');
+    el.className = 'alert'; el.dataset.s = s;
+    const where = `Kamar ${b.room} · Bed ${b.bed} · ${esc(bedName(b))}`;
+    if (s === 'pra') {
+      el.innerHTML = `${icon('i-alarm')}<div><p class="a-title">Pra-alarm · ${where}</p><div class="a-detail"></div></div>
+        <div class="a-actions"><button class="btn btn-white" type="button" data-act="cancel">Batalkan, pasien aman</button><button class="btn btn-red" type="button" data-act="confirm">Panggil Code Blue sekarang</button></div><i class="a-bar"></i>`;
+    } else {
+      el.innerHTML = `${icon('i-cb')}<div><p class="a-title">Code Blue · ${where}</p><div class="a-detail"></div></div>
+        <div class="a-actions"><button class="btn btn-oncb" type="button" data-act="close">Tandai selesai</button></div>`;
+    }
+    el.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) { select(b.id, true); return; }
+      if (btn.dataset.act === 'cancel') ward.cancel(b);
+      if (btn.dataset.act === 'confirm') ward.confirm(b);
+      if (btn.dataset.act === 'close') ward.close(b);
+      refresh();
+    });
+    return el;
+  }
+  function updateAlerts() {
+    const want = ward.beds.map(b => ({ b, s: b.mon.status() })).filter(x => x.s === 'pra' || x.s === 'codeblue')
+      .sort((x, y) => (x.s === 'codeblue' ? 0 : 1) - (y.s === 'codeblue' ? 0 : 1));
+    const keep = new Set();
+    for (const { b, s } of want) {
+      const key = b.id + ':' + s;
+      keep.add(key);
+      let el = banners.get(key);
+      if (!el) { el = makeBanner(b, s); banners.set(key, el); }
+      const m = b.mon;
+      if (s === 'pra') {
+        const left = Math.max(0, CFG.verify - (ward.t - m.praT));
+        setText(el.querySelector('.a-detail'), `Tidak ada napas efektif ${Math.floor(ward.t - m.praSince)} dtk. Code Blue otomatis dalam ${Math.ceil(left)} dtk bila tidak dibatalkan.`);
+        el.querySelector('.a-bar').style.width = `${(left / CFG.verify) * 100}%`;
+      } else {
+        const src = { otomatis: 'aktivasi otomatis', perawat: 'dikonfirmasi perawat', manual: 'tombol manual' }[m.cbSource];
+        setText(el.querySelector('.a-detail'), `${hms(wallAt(m.cbT))} · ${src} · relay nurse call menyala · Tim Code Blue dipanggil (${Math.floor(ward.t - m.cbT)} dtk lalu)`);
+      }
+    }
+    for (const [key, el] of banners) if (!keep.has(key)) { el.remove(); banners.delete(key); }
+    want.forEach(({ b, s }, i) => { const el = banners.get(b.id + ':' + s); if (alertsEl.children[i] !== el) alertsEl.insertBefore(el, alertsEl.children[i] || null); });
+  }
+
+  /* ---------- Grafik batang laju napas ---------- */
+  const barsEl = $('#bars');
+  const bars = { mode: 'bed', room: 'all', cols: [] };
+  const DOT = { waspada: 'var(--amber)', kritis: 'var(--orange)', pra: 'var(--red)', codeblue: 'var(--cb)', teknis: 'var(--violet)' };
+  function rebuildBars() {
+    barsEl.innerHTML = ''; bars.cols = [];
+    const mk = (labelHTML) => {
+      const c = document.createElement('div');
+      c.className = 'bcol';
+      c.innerHTML = `<div class="btrack"><div class="bbar"></div><div class="btip"></div></div><div class="blabel">${labelHTML}</div>`;
+      barsEl.appendChild(c);
+      return { el: c, bar: c.querySelector('.bbar'), tip: c.querySelector('.btip'), lab: c.querySelector('.blabel') };
+    };
+    if (bars.mode === 'bed') {
+      for (const b of ward.beds) {
+        if (bars.room !== 'all' && b.room !== bars.room) continue;
+        const col = mk(`<span class="sd"></span><span><span class="br">${b.room}-</span>${b.bed}</span>`);
+        col.bed = b; col.sd = col.lab.querySelector('.sd');
+        col.el.addEventListener('click', () => select(b.id, false));
+        bars.cols.push(col);
+      }
+    } else {
+      for (let i = 9; i >= 0; i--) { const col = mk(i === 0 ? 'kini' : `−${i}`); col.min = i; bars.cols.push(col); }
+    }
+    $('#sel-room').disabled = bars.mode !== 'bed';
+    updateBars();
+  }
+  function trendMinutes(m) {
+    const tNow = ward.t, out = [];
+    for (let i = 9; i >= 0; i--) {
+      const a = tNow - (i + 1) * 60, z = tNow - i * 60;
+      const v = m.trend.filter(p => p.t > a && p.t <= z && p.rr !== null).map(p => p.rr);
+      out.push(v.length ? Math.round(v.reduce((s, x) => s + x, 0) / v.length) : null);
+    }
+    return out;
+  }
+  function setBar(col, rr, active, tipText) {
+    const pct = rr === null ? 0 : Math.min(rr, 40) / 40 * 100;
+    col.bar.style.height = `${pct}%`;
+    col.el.classList.toggle('is-active', active);
+    col.el.classList.toggle('is-empty', rr === null);
+    setText(col.tip, tipText);
+    col.tip.style.bottom = `calc(${pct}% + 14px)`;
+  }
+  function updateBars() {
+    const sb = ward.byId(selected);
+    if (bars.mode === 'bed') {
+      setText($('#bars-title'), 'Laju napas per bed');
+      for (const col of bars.cols) {
+        const m = col.bed.mon, s = m.status();
+        const ok = m.rr !== null && !m.fault && !['ditahan', 'kosong', 'teknis'].includes(s);
+        const rr = ok ? Math.round(m.rr) : null;
+        col.el.dataset.s = s;
+        col.sd.style.background = DOT[s] || 'transparent';
+        setBar(col, rr, col.bed.id === selected, rr === null ? `${bedLabel(col.bed)} · ${STATUS[s].label}` : `${bedLabel(col.bed)} · RR ${rr}/mnt`);
+      }
+    } else {
+      setText($('#bars-title'), `Tren laju napas · ${bedLabel(sb)}`);
+      const v = trendMinutes(sb.mon);
+      bars.cols.forEach((col, k) => {
+        const rr = v[k];
+        col.el.dataset.s = rr === null ? 'kosong' : (rr <= CFG.rrCritLow || rr >= CFG.rrCritHigh) ? 'kritis' : (rr <= CFG.rrWarnLow || rr > CFG.rrWarnHigh) ? 'waspada' : 'stabil';
+        setBar(col, rr, col.min === 0, `${col.min === 0 ? 'Menit ini' : col.min + ' mnt lalu'} · ${rr === null ? 'tanpa RR' : 'RR ' + rr + '/mnt'}`);
+      });
+    }
+  }
+  $('#sel-room').addEventListener('change', e => { bars.room = e.target.value; rebuildBars(); });
+  $('#sel-mode').addEventListener('change', e => { bars.mode = e.target.value; rebuildBars(); });
+
+  /* ---------- Gauge timer henti napas ---------- */
+  const GV = 35, GCX = 120, GCY = 120, GR = 96;
+  const gp = v => { const th = Math.PI * (1 - v / GV); return [GCX + GR * Math.cos(th), GCY - GR * Math.sin(th)]; };
+  const arc = (v0, v1) => { const [x0, y0] = gp(v0), [x1, y1] = gp(v1); return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${GR} ${GR} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+  $('#gz-s1').setAttribute('d', arc(0, 10.6));
+  $('#gz-s2').setAttribute('d', arc(13.4, 18.6));
+  $('#gz-s3').setAttribute('d', arc(21.4, 35));
+  const selBed = $('#sel-bed');
+  selBed.innerHTML = ward.beds.map(b => `<option value="${b.id}">Bed ${bedLabel(b)}</option>`).join('');
+  selBed.addEventListener('change', e => select(e.target.value, false));
+  function updateGauge() {
+    const b = ward.byId(selected), m = b.mon, s = m.status();
+    let v, big, lab, show = true;
+    if (s === 'pra') { const el = ward.t - m.praT; v = 20 + el; big = String(Math.max(0, Math.ceil(CFG.verify - el))); lab = 'dtk menuju Code Blue otomatis'; }
+    else if (s === 'codeblue') { v = GV; big = 'Aktif'; lab = `Code Blue · ${Math.floor(ward.t - m.cbT)} dtk lalu`; }
+    else if (s === 'kosong' || s === 'ditahan' || s === 'teknis') { v = 0; big = '—'; lab = s === 'kosong' ? 'bed kosong · timer berhenti' : s === 'ditahan' ? 'gerakan · timer dihitung ulang' : 'pad tidak terbaca'; show = false; }
+    else { v = Math.min(m.apneaSec, 20); big = String(Math.floor(m.apneaSec)); lab = 'dtk tanpa napas efektif'; }
+    const [x, y] = gp(Math.max(0, Math.min(GV, v)));
+    const k = $('#gz-knob');
+    k.setAttribute('cx', x.toFixed(1)); k.setAttribute('cy', y.toFixed(1));
+    k.style.opacity = show ? '1' : '0';
+    setText($('#gz-big'), big); setText($('#gz-lab'), lab);
+    if (selBed.value !== selected) selBed.value = selected;
+  }
+
+  /* ---------- Kartu sinyal & simulasi ---------- */
+  const SCEN = [
+    { k: 'normal', t: 'Napas normal', d: 'RR kembali ke nilai awal' },
+    { k: 'perburukan', t: 'Perburukan bertahap', d: 'RR naik ke 32/mnt' },
+    { k: 'lambat', t: 'Napas melambat', d: 'RR turun ke 7/mnt' },
+    { k: 'apnea', t: 'Henti napas', d: 'Pra-alarm setelah 20 dtk' },
+    { k: 'gasp', t: 'Henti napas + gasping', d: 'Gasping tidak me-reset timer' },
+    { k: 'gerak', t: 'Pasien bergerak', d: 'Artefak gerak 20 dtk' },
+    { k: 'turun', t: 'Turun dari bed', d: 'Uji deteksi bed kosong', alt: { k: 'naik', t: 'Berbaring di bed', d: 'Pasien kembali ke pad' } },
+    { k: 'cabut', t: 'Cabut konektor pad', d: 'Uji alarm teknis', alt: { k: 'pasang', t: 'Pasang konektor pad', d: 'Pemantauan berlanjut' } }
+  ];
+  const scGrid = $('#sc-grid');
+  const scBtns = SCEN.map(sc => {
+    const btn = document.createElement('button');
+    btn.className = 'sc'; btn.type = 'button';
+    btn.addEventListener('click', () => { const k = btn.dataset.k; if (k) { ward.scenario(ward.byId(selected), k); refresh(); } });
+    scGrid.appendChild(btn);
+    return { sc, btn, cur: '' };
+  });
+  function updateScButtons(b) {
+    const s = b.sim;
+    for (const x of scBtns) {
+      let v = x.sc;
+      if (x.sc.k === 'turun' && !s.present) v = x.sc.alt;
+      if (x.sc.k === 'cabut' && !s.connected) v = x.sc.alt;
+      if (x.cur !== v.k) { x.cur = v.k; x.btn.dataset.k = v.k; x.btn.innerHTML = `${v.t}<small>${v.d}</small>`; }
+      const breathing = ['normal', 'perburukan', 'lambat', 'apnea', 'gasp', 'gerak'].includes(v.k);
+      x.btn.disabled = (breathing && (!s.present || s.leaveAt > 0)) || (v.k === 'turun' && s.leaveAt > 0) || (v.k !== 'pasang' && v.k !== 'cabut' && !s.connected);
+    }
+  }
+  $('#btn-manual').addEventListener('click', () => { ward.scenario(ward.byId(selected), 'manual'); refresh(); });
+
+  function select(id, user) {
+    selected = id;
+    const b = ward.byId(id);
+    setText($('#sig-title'), `Sinyal pad · Kamar ${b.room}, Bed ${b.bed}`);
+    setText($('#sim-bed'), `Kamar ${b.room} · Bed ${b.bed}`);
+    $('#f-cal').textContent = `Kalibrasi dua titik: pad kosong ${mhz(b.cal.empty)} MHz · pasien berbaring ${mhz(b.cal.occ)} MHz · selisih ${nf0.format(b.cal.empty - b.cal.occ)} Hz`;
+    refresh();
+    if (user && window.matchMedia('(max-width: 1023px)').matches) $('#sig').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  let curSev = '';
+  function setOut(id, on) { const e = document.getElementById(id); if (e.dataset.on !== String(on)) e.dataset.on = String(on); if (e.dataset.sev !== curSev) e.dataset.sev = curSev; }
+  function updateSignal() {
+    const b = ward.byId(selected), m = b.mon, s = m.status();
+    const pill = $('#sig-pill');
+    if (pill.dataset.s !== s || !pill.innerHTML) { pill.dataset.s = s; pill.innerHTML = `${icon(STATUS[s].icon)}<span>${STATUS[s].label}</span>`; }
+    setText($('#sig-meta'), b.name ? `${b.name} · ${b.age} th · ${b.dx} · No. RM ${b.no_rm} · ICD-10 ${b.icd10_code} · SEP ${b.sep_number} · ${b.visit_status}`
+      : (b.sim.present ? 'Pasien baru · belum terdaftar di SIMRS' : 'Belum ada pasien · bed siap pakai'));
+    const rrShown = m.rr !== null && s !== 'ditahan' && s !== 'kosong' && !m.fault;
+    $('#v-rr').innerHTML = `${rrShown ? Math.round(m.rr) : '--'}<small>/mnt</small>`;
+    setText($('#v-rr-sub'), rrShown ? 'median 5 interval napas' : (s === 'ditahan' ? 'ditahan selama gerakan' : 'belum ada napas teratur'));
+    const sqiOk = !m.fault && s !== 'kosong';
+    setText($('#v-sqi'), sqiOk ? nf2.format(m.sqi) : '--');
+    $('#v-sqi-bar').style.width = `${sqiOk ? m.sqi * 100 : 0}%`;
+    $('#v-sqi-bar').style.background = m.held ? 'var(--ink-3)' : 'var(--blue)';
+    const score = Math.max(0, Math.min(1.2, m.dc / m.delta));
+    setText($('#v-pres'), m.fault ? 'Tidak terbaca' : (m.present ? 'Hadir' : 'Kosong'));
+    $('#v-pres-bar').style.width = `${m.fault ? 0 : Math.min(100, score * 100)}%`;
+    $('#v-f').innerHTML = m.fault ? '—' : `${mhz(m.lastF)} MHz`;
+    setText($('#v-f-sub'), m.fault ? 'tidak ada osilasi' : `Δ ${nf0.format(m.lastX)} Hz dari pad kosong`);
+
+    $('#n-pad-v').innerHTML = m.fault ? '<b>Tidak ada osilasi</b><br>Konektor pad terlepas?' : `<b>${mhz(m.lastF)} MHz</b><br>Δ ${nf0.format(m.lastX)} Hz dari pad kosong`;
+    $('#n-pad').dataset.hot = String(m.fault);
+    $('#n-dsp-v').innerHTML = m.fault ? 'Menunggu sinyal' :
+      `RR <b>${rrShown ? Math.round(m.rr) : '--'}</b> · SQI <b>${nf2.format(m.sqi)}</b><br>${m.present ? 'Pasien hadir' : 'Bed kosong'} · ambang ${nf0.format(m.h)} Hz<br>${m.held ? 'Keluaran ditahan' : 'Keluaran aktif'}`;
+    let rule;
+    if (s === 'pra') rule = `<b>Pra-alarm</b><br>Code Blue dalam ${Math.ceil(Math.max(0, CFG.verify - (ward.t - m.praT)))} dtk`;
+    else if (s === 'codeblue') rule = `<b>Code Blue</b><br>${{ otomatis: 'otomatis', perawat: 'konfirmasi perawat', manual: 'tombol manual' }[m.cbSource]}`;
+    else rule = `<b>${STATUS[s].label}</b><br>Tanpa napas ${Math.floor(m.apneaSec)}/${CFG.apnea} dtk<br>Bertahan: ${ward.demo ? '10 dtk (demo)' : '2 mnt / 1 mnt'}`;
+    $('#n-rule-v').innerHTML = rule;
+    $('#n-rule').dataset.hot = String(s === 'pra' || s === 'codeblue');
+    curSev = ['waspada', 'kritis', 'teknis'].includes(s) ? s : '';
+    const warmSev = s === 'waspada' || s === 'kritis' ? s : '';
+    $('#n-rule').dataset.sev = warmSev;
+    $('#n-out').dataset.sev = warmSev;
+    $('#v-rr').parentElement.dataset.sev = warmSev;
+    setOut('o-ns', ['waspada', 'kritis', 'pra', 'codeblue', 'teknis'].includes(s));
+    setOut('o-hp', ['kritis', 'pra', 'codeblue', 'teknis'].includes(s));
+    setOut('o-bz', s === 'pra' || s === 'codeblue');
+    setOut('o-rl', s === 'codeblue');
+    setOut('o-cb', s === 'codeblue');
+    $('#n-out').dataset.hot = String(s === 'pra' || s === 'codeblue');
+    updateScButtons(b);
+  }
+
+  function refresh() {
+    updateQueue(); updateKpis(); updateAlerts(); updateWatch(); updateBars(); updateGauge(); updateSignal();
+    setText($('#clock'), hms(new Date()));
+  }
+
+  /* ---------- Canvas sinyal ---------- */
+  const C = { trace: '#5B8DEF', raw: '#A9BBD3', grid: '#EEF1F5', ink3: '#9CA3AF', ink2: '#6B7280', surface: '#FFFFFF', hold: '#6B7280', dark: '#141518' };
+  const sizes = new WeakMap();
+  const ro = new ResizeObserver(entries => { for (const e of entries) sizes.set(e.target, { w: e.contentRect.width, h: e.contentRect.height }); });
+  function prep(cv) {
+    let sz = sizes.get(cv);
+    if (!sz) { const r = cv.getBoundingClientRect(); sz = { w: r.width, h: r.height }; sizes.set(cv, sz); ro.observe(cv); }
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = Math.max(1, Math.round(sz.w * dpr)), H = Math.max(1, Math.round(sz.h * dpr));
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, sz.w, sz.h);
+    return { ctx, w: sz.w, h: sz.h };
+  }
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+  const at = (buf, m, k) => buf[(m.head + k) % m.N];
+  const hover = new Map();
+  function hookHover(cv) {
+    const set = e => { const r = cv.getBoundingClientRect(); hover.set(cv, e.clientX - r.left); };
+    cv.addEventListener('pointermove', set);
+    cv.addEventListener('pointerdown', set);
+    cv.addEventListener('pointerleave', () => { hover.delete(cv); tipFor(cv).hidden = true; });
+  }
+  function tipFor(cv) {
+    if (!cv._tip) { const t = document.createElement('div'); t.className = 'tip'; t.hidden = true; cv.parentElement.appendChild(t); cv._tip = t; }
+    return cv._tip;
+  }
+  function showTip(cv, x, y, text) {
+    const t = tipFor(cv);
+    t.hidden = false; t.textContent = text;
+    const w = cv.parentElement.clientWidth, half = (t.offsetWidth || 80) / 2;
+    t.style.left = `${Math.max(half, Math.min(w - half, x))}px`;
+    t.style.top = `${cv.offsetTop + y - 8}px`;
+  }
+  function drawStrip(cv, m, which) {
+    const { ctx, w, h } = prep(cv);
+    const buf = which === 'x' ? m.bufX : m.bufB, N = m.N;
+    const L = 50, R = 8, T = 6, B = 18, pw = w - L - R, ph = h - T - B;
+    let lo = Infinity, hi = -Infinity;
+    for (let k = 0; k < N; k++) { const v = at(buf, m, k); if (v === v) { if (v < lo) lo = v; if (v > hi) hi = v; } }
+    if (!isFinite(lo)) { lo = -10; hi = 10; }
+    if (which === 'b') { const a = 1.18 * Math.max(Math.abs(lo), Math.abs(hi), m.h * 1.6, 12); lo = -a; hi = a; }
+    else { const minR = 60; if (hi - lo < minR) { const c = (hi + lo) / 2; lo = c - minR / 2; hi = c + minR / 2; } const p = (hi - lo) * 0.1; lo -= p; hi += p; }
+    const X = k => L + (k / (N - 1)) * pw, Y = v => T + ph * (1 - (v - lo) / (hi - lo));
+    let s0 = -1;
+    for (let k = 0; k <= N; k++) {
+      const held = k < N && at(m.bufH, m, k);
+      if (held && s0 < 0) s0 = k;
+      if ((!held || k === N) && s0 >= 0) {
+        const x0 = X(s0), x1 = X(Math.min(k, N - 1));
+        ctx.save(); ctx.beginPath(); ctx.rect(x0, T, Math.max(1, x1 - x0), ph); ctx.clip();
+        ctx.fillStyle = rgba(C.hold, 0.08); ctx.fillRect(x0, T, x1 - x0, ph);
+        ctx.strokeStyle = rgba(C.hold, 0.28); ctx.lineWidth = 1;
+        for (let xx = x0 - ph; xx < x1 + ph; xx += 7) { ctx.beginPath(); ctx.moveTo(xx, T + ph); ctx.lineTo(xx + ph, T); ctx.stroke(); }
+        ctx.restore(); s0 = -1;
+      }
+    }
+    ctx.font = '500 11px "Plus Jakarta Sans", system-ui, sans-serif'; ctx.textBaseline = 'middle';
+    const ticks = which === 'b' ? [lo * 0.6, 0, hi * 0.6] : [lo + (hi - lo) * 0.2, lo + (hi - lo) * 0.8];
+    for (const v of ticks) {
+      const y = Math.round(Y(v)) + 0.5;
+      ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
+      ctx.fillStyle = C.ink3; ctx.textAlign = 'right';
+      ctx.fillText(which === 'b' ? (Math.abs(v) < 0.5 ? '0' : (v > 0 ? '+' : '−') + nf0.format(Math.abs(v))) : nf0.format(v), L - 6, y);
+    }
+    ctx.textBaseline = 'alphabetic'; ctx.fillStyle = C.ink3;
+    for (const sec of [30, 20, 10, 0]) {
+      const x = X(N - 1 - sec * FS);
+      ctx.textAlign = sec === 30 ? 'left' : sec === 0 ? 'right' : 'center';
+      ctx.fillText(sec === 0 ? 'kini' : `−${sec} dtk`, x, h - 4);
+    }
+    ctx.save(); ctx.beginPath(); ctx.rect(L, T - 6, pw, ph + 12); ctx.clip();
+    ctx.beginPath(); let pen = false;
+    for (let k = 0; k < N; k++) {
+      const v = at(buf, m, k);
+      if (v !== v) { pen = false; continue; }
+      const x = X(k), y = Y(v);
+      if (!pen) { ctx.moveTo(x, y); pen = true; } else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = which === 'x' ? C.raw : C.trace; ctx.lineWidth = which === 'x' ? 1.5 : 2;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+    if (which === 'b') {
+      const tNow = m.lastT;
+      for (const br of m.breaths) {
+        const k = N - 1 - Math.round((tNow - br.t) * FS);
+        if (k < 0) continue;
+        const x = X(k), y = Y(br.v);
+        ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = br.eff ? C.dark : C.surface; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = br.eff ? C.surface : C.ink3; ctx.stroke();
+      }
+    }
+    ctx.restore();
+    const hx = hover.get(cv);
+    if (hx != null && hx >= L && hx <= L + pw) {
+      const k = Math.round(((hx - L) / pw) * (N - 1)), v = at(buf, m, k);
+      ctx.strokeStyle = C.ink3; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.round(hx) + 0.5, T); ctx.lineTo(Math.round(hx) + 0.5, T + ph); ctx.stroke();
+      if (v === v) {
+        const y = Y(v);
+        ctx.beginPath(); ctx.arc(hx, y, 4, 0, Math.PI * 2); ctx.fillStyle = which === 'x' ? C.raw : C.trace; ctx.fill();
+        ctx.strokeStyle = C.surface; ctx.lineWidth = 2; ctx.stroke();
+        const ago = ((N - 1 - k) / FS).toFixed(1).replace('.', ',');
+        showTip(cv, hx, y, which === 'x' ? `−${ago} dtk · Δf ${nf0.format(v)} Hz` : `−${ago} dtk · ${v >= 0 ? '+' : '−'}${nf0.format(Math.abs(v))} Hz`);
+      } else showTip(cv, hx, T + 10, 'tidak ada sinyal');
+    }
+  }
+  const cvRaw = $('#cv-raw'), cvB = $('#cv-b');
+  [cvRaw, cvB].forEach(hookHover);
+  function frame() {
+    const m = ward.byId(selected).mon;
+    drawStrip(cvRaw, m, 'x');
+    drawStrip(cvB, m, 'b');
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- Popover: cari, notifikasi, profil, pengaturan ---------- */
+  const pop = $('#pop');
+  let popFor = null;
+  function openPop(anchor, html, onMount) {
+    if (popFor === anchor && !pop.hidden) { closePop(); return; }
+    pop.innerHTML = html; pop.hidden = false; popFor = anchor;
+    const r = anchor.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let left, top;
+    if (anchor.closest('.rail')) { left = r.right + 12; top = Math.min(r.top, window.innerHeight - ph - 12); }
+    else { left = r.right - pw; top = r.bottom + 10; }
+    pop.style.left = `${Math.max(12, Math.min(window.innerWidth - pw - 12, left))}px`;
+    pop.style.top = `${Math.max(12, top)}px`;
+    if (onMount) onMount(pop);
+  }
+  function closePop() { pop.hidden = true; popFor = null; }
+  document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !(popFor && popFor.contains(e.target))) closePop(); });
+  window.addEventListener('scroll', () => { if (!pop.hidden) closePop(); }, { passive: true });
+
+  function notifPop(anchor) {
+    const items = notifHist.length ? notifHist.map(n => `<li><b>${n.what}</b>${n.det}<br><span>${n.who} · ${hms(n.at)}</span></li>`).join('')
+      : '<li>Belum ada notifikasi sejak dasbor dibuka.</li>';
+    openPop(anchor, `<h3>Notifikasi ke ponsel</h3><p>Pesan yang dikirim ke ponsel perawat dan Tim Code Blue.</p><ul class="nl">${items}</ul>`);
+  }
+  function settingsPop(anchor) {
+    openPop(anchor, `<h3>Pengaturan</h3>
+      <div class="sw-row"><span>Suara alarm<small>Bunyi pra-alarm dan Code Blue di peramban</small></span><button class="sw" type="button" role="switch" id="sw-sound" aria-checked="${soundOn}" aria-label="Suara alarm"></button></div>
+      <div class="sw-row"><span>Mode demo<small>Waspada dan Kritis bertahan 10 dtk, bukan 2 mnt / 1 mnt</small></span><button class="sw" type="button" role="switch" id="sw-demo" aria-checked="${ward.demo}" aria-label="Mode demo"></button></div>`,
+      p => {
+        p.querySelector('#sw-sound').addEventListener('click', e => { setSound(!soundOn); e.currentTarget.setAttribute('aria-checked', String(soundOn)); });
+        p.querySelector('#sw-demo').addEventListener('click', e => { setDemo(!ward.demo); e.currentTarget.setAttribute('aria-checked', String(ward.demo)); refresh(); });
+      });
+  }
+  $('#btn-bell').addEventListener('click', e => notifPop(e.currentTarget));
+  $('#btn-user').addEventListener('click', e => openPop(e.currentTarget, `<h3>Ns. Rina</h3><p>Perawat jaga · shift pagi 07.00–14.00</p><p>Bangsal Melati, Lantai 3</p><p>Akun contoh untuk prototipe. Nama fiktif.</p>`));
+  $('#btn-search').addEventListener('click', e => openPop(e.currentTarget, `<h3>Cari pasien atau bed</h3><input class="search-in" id="search-in" type="search" placeholder="Nama, nomor RM, ICD-10, atau 301-B" autocomplete="off"><ul class="res" id="search-res"></ul>`, p => {
+    const inp = p.querySelector('#search-in'), res = p.querySelector('#search-res');
+    const render = () => {
+      const qv = inp.value.trim().toLowerCase();
+      const hits = ward.beds.filter(b => !qv || [bedName(b), bedLabel(b), b.no_rm, b.icd10_code, b.dx].filter(Boolean).some(x => String(x).toLowerCase().includes(qv)));
+      res.innerHTML = hits.map(b => `<li><button type="button" data-id="${b.id}"><span class="av">${avHTML(b)}</span><span><b>${esc(bedName(b))}</b><small>${bedLabel(b)}${b.no_rm ? ' · RM ' + b.no_rm + ' · ' + b.icd10_code : ' · siap pakai'}</small></span></button></li>`).join('') || '<li><p>Tidak ditemukan.</p></li>';
+    };
+    res.addEventListener('click', ev => { const btn = ev.target.closest('button[data-id]'); if (btn) { closePop(); select(btn.dataset.id, true); } });
+    inp.addEventListener('input', render);
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') { const first = res.querySelector('button[data-id]'); if (first) first.click(); } });
+    render(); inp.focus();
+  }));
+
+  /* ---------- Panel samping buka-tutup ---------- */
+  const side = $('.side'), sideToggle = $('#side-toggle');
+  function setSide(open, save) {
+    side.classList.toggle('is-collapsed', !open);
+    sideToggle.setAttribute('aria-expanded', String(open));
+    const lab = open ? 'Tutup panel' : 'Buka panel';
+    sideToggle.title = lab; sideToggle.setAttribute('aria-label', lab);
+    sideToggle.innerHTML = icon(open ? 'i-panel-close' : 'i-panel-open');
+    if (save) { try { localStorage.setItem('siagabed.side', open ? 'open' : 'closed'); } catch (e) { /* penyimpanan tidak tersedia */ } }
+  }
+  let sidePref = null;
+  try { sidePref = localStorage.getItem('siagabed.side'); } catch (e) { sidePref = null; }
+  setSide(sidePref ? sidePref === 'open' : window.matchMedia('(min-width: 1024px)').matches, false);
+  sideToggle.addEventListener('click', () => setSide(side.classList.contains('is-collapsed'), true));
+  const openSide = () => { if (side.classList.contains('is-collapsed')) setSide(true, true); };
+
+  /* ---------- Navigasi rail ---------- */
+  const about = $('#about');
+  const openAbout = () => { about.hidden = false; $('#about-x').focus(); };
+  document.querySelectorAll('.rail-btn').forEach(btn => btn.addEventListener('click', () => {
+    const nav = btn.dataset.nav;
+    const scrollTo = el => el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const activate = () => { document.querySelectorAll('.rail-nav .rail-btn').forEach(x => x.classList.toggle('is-active', x === btn)); };
+    if (nav === 'top') { activate(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    if (nav === 'queue') { activate(); openSide(); scrollTo($('#queue')); const it = $('#queue .qi[aria-current="true"]') || $('#queue .qi'); if (it) it.focus({ preventScroll: true }); }
+    if (nav === 'log') { activate(); scrollTo($('#log')); }
+    if (nav === 'cal') { activate(); openSide(); scrollTo($('#cal')); }
+    if (nav === 'demo' && !guide) startGuide();
+    if (nav === 'notif') notifPop(btn);
+    if (nav === 'settings') settingsPop(btn);
+    if (nav === 'help') openAbout();
+  }));
+  $('#sum-go').addEventListener('click', () => { $('#sel-mode').value = 'bed'; bars.mode = 'bed'; rebuildBars(); $('#bars-card').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('#k1-go').addEventListener('click', openAbout);
+  $('#k2-go').addEventListener('click', () => { openSide(); $('#queue').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('#k3-go').addEventListener('click', () => { $('#sel-g').value = 'alarm'; filt.g = 'alarm'; applyFilter(); $('#log').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('#about-x').addEventListener('click', () => { about.hidden = true; });
+  about.addEventListener('click', e => { if (e.target === about) about.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!about.hidden) about.hidden = true; if (!pop.hidden) closePop(); } });
+
+  /* ---------- Demo terpandu ---------- */
+  const guideEl = $('#guide'), gStep = $('#g-step'), gText = $('#g-text'), gBar = $('#g-bar'), btnGuide = $('#btn-guide');
+  const G = () => ward.byId('301-B');
+  const STEPS = [
+    { text: 'Delapan bed dipantau dari pad induksi magnetik di bawah sprei. Kita ikuti Kamar 301, Bed B: napas normal sekitar 14 kali per menit.', enter() { select('301-B'); ward.scenario(G(), 'normal', { rate: 3 }); }, max: 12 },
+    { text: 'Perburukan bertahap: laju napas naik ke 32/mnt. Mesin aturan menaikkan status ke Waspada, lalu Kritis, dan mengirim notifikasi.', enter() { ward.scenario(G(), 'perburukan', { rate: 0.5 }); }, done: () => G().mon.rrStage === 'kritis', max: 80, tail: 5 },
+    { text: 'Pasien bergerak selama 15 detik. SQI turun, keluaran ditahan, dan tidak ada alarm palsu.', enter() { ward.scenario(G(), 'normal', { rate: 4 }); ward.scenario(G(), 'gerak', { dur: 15 }); }, max: 24 },
+    { text: 'Pasien turun dari bed. Kehadiran dibaca dari level frekuensi pad, jadi statusnya Bed kosong dan alarm klinis tidak berbunyi.', enter() { ward.scenario(G(), 'turun'); }, done: () => !G().mon.present, max: 25, tail: 5 },
+    { text: 'Pasien kembali berbaring. Pemantauan napas dimulai lagi secara otomatis.', enter() { ward.scenario(G(), 'naik'); }, done: () => G().mon.present, max: 30, tail: 8 },
+    { text: 'Henti napas. Setelah 20 detik tanpa napas efektif, pra-alarm berbunyi di bedhead, nurse station, dan ponsel perawat.', enter() { ward.scenario(G(), 'apnea'); }, done: () => G().mon.alarm === 'pra', max: 45, tail: 3 },
+    { text: 'Tidak ada yang membatalkan dalam 15 detik, jadi Code Blue aktif otomatis: relay nurse call menyala dan Tim Code Blue dipanggil.', enter() {}, done: () => G().mon.alarm === 'cb', max: 25, tail: 6 },
+    { text: 'Tombol Code Blue manual tetap berfungsi. Tombol di Kamar 302, Bed A ditekan, dan aktivasinya tercatat di log yang sama.', enter() { ward.scenario(ward.byId('302-A'), 'manual'); }, max: 9 },
+    { text: 'Demo selesai. Tekan Tandai selesai pada banner Code Blue, lalu coba skenario lain dari kartu simulasi. Semua kejadian tadi ada di log.', enter() {}, max: 14 }
+  ];
+  let guide = null;
+  function startGuide() {
+    if (!ward.demo) setDemo(true);
+    for (const b of ward.beds) if (b.mon.alarm !== 'none') { if (b.mon.alarm === 'pra') ward.cancel(b); else ward.close(b); }
+    const g = G();
+    if (!g.sim.connected) ward.scenario(g, 'pasang');
+    if (!g.sim.present) ward.scenario(g, 'naik');
+    guide = { i: -1, t0: 0, doneAt: null };
+    guideEl.hidden = false; btnGuide.disabled = true;
+    btnGuide.querySelector('span').textContent = 'Demo terpandu berjalan';
+    nextStep();
+  }
+  function nextStep() {
+    guide.i++;
+    if (guide.i >= STEPS.length) { stopGuide(); return; }
+    const st = STEPS[guide.i];
+    guide.t0 = ward.t; guide.doneAt = null;
+    gStep.textContent = `Langkah ${guide.i + 1} dari ${STEPS.length}`;
+    gText.textContent = st.text;
+    st.enter();
+    refresh();
+  }
+  function stopGuide() {
+    guide = null; guideEl.hidden = true; btnGuide.disabled = false;
+    btnGuide.querySelector('span').textContent = 'Demo terpandu · ±3 menit';
+  }
+  function guideTick() {
+    if (!guide) return;
+    const st = STEPS[guide.i], el = ward.t - guide.t0;
+    if (st.done && guide.doneAt === null && st.done()) guide.doneAt = ward.t;
+    const finished = guide.doneAt !== null ? ward.t - guide.doneAt >= (st.tail || 0) : el >= st.max;
+    gBar.style.width = `${Math.min(100, (el / st.max) * 100)}%`;
+    if (finished || el >= st.max + (st.tail || 0)) nextStep();
+  }
+  btnGuide.addEventListener('click', startGuide);
+  $('#g-stop').addEventListener('click', stopGuide);
+
+  /* ---------- Mulai ---------- */
+  const occupied = ward.beds.filter(b => b.sim.present).length;
+  addLog({ t: 0, type: 'mulai', bed: null, data: { text: `${occupied} pasien terpantau, ${ward.beds.length - occupied} bed kosong; kalibrasi dua titik setiap pad tersimpan` } });
+  for (let i = 0; i < PRE * FS; i++) ward.step();
+  booting = false;
+  bootWall = Date.now();
+  rebuildBars();
+  select(selected, false);
+  requestAnimationFrame(frame);
+
+  let lastReal = performance.now(), acc = 0;
+  setInterval(() => {
+    const now = performance.now();
+    acc += Math.min(5, (now - lastReal) / 1000); lastReal = now;
+    let n = 0;
+    while (acc >= E.DT && n < 150) { ward.step(); acc -= E.DT; n++; }
+    if (n >= 150) acc = 0;
+    guideTick(); soundTick();
+  }, 40);
+  setInterval(refresh, 250);
+})();
+</script>
+
+</body>
+</html>
