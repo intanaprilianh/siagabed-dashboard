@@ -24,3 +24,27 @@ Dasbor web ini menjalankan alur **sensor → ambang kondisi kritis → alarm**. 
 ## Menjalankan secara lokal
 
 Buka `index.html` langsung di peramban. Tidak perlu server atau instalasi; font dimuat dari Google Fonts bila ada koneksi internet.
+
+## Mode live (data dari hub)
+
+Tanpa parameter, dasbor berjalan sebagai simulasi seperti di atas. Dengan `?live`, dasbor membaca data
+dari hub SiagaBed (ESP32 asli atau hub palsu) lewat broker MQTT, dan memakai server backend untuk log
+hari ini, tren, serta pengiriman perintah perawat (batalkan, konfirmasi, tandai selesai) ke hub.
+Kode mode live ada di `live.js`; pustaka `vendor/mqtt.min.js` (MQTT.js 5.10.1, lisensi MIT) disimpan
+lokal supaya tetap jalan di jaringan rumah sakit tanpa internet.
+
+Cara termudah: jalankan backend dari repo `siagabed-backend` (folder ini harus bersebelahan dengannya),
+lalu buka **http://localhost:8080/dashboard/?live=1**. Dari ponsel di Wi-Fi yang sama, ganti
+`localhost` dengan IP komputer server.
+
+Opsi URL: `&ws=ws://host:9001` (broker), `&api=http://host:8080` (backend), `&ward=melati` (bangsal).
+Mode bisa juga diganti dari menu Pengaturan → Sumber data.
+
+Di mode live:
+- status bed, laju napas, timer henti napas, dan gelombang napas datang dari hub (tertunda ±1 dtk);
+- keputusan alarm tetap di hub; tombol di banner mengirim perintah ke hub dan tercatat di database
+  beserta nama perawat;
+- kartu simulasi menjadi **Kontrol hub** (kalibrasi pad kosong/terisi, cek hub); demo terpandu dimatikan;
+- hub yang terputus tampil sebagai alarm teknis "hub offline" dan muncul di log;
+- bila backend tidak berjalan, dasbor tetap menampilkan data live dan mengirim perintah langsung lewat
+  MQTT, tetapi log hanya sejak halaman dibuka dan tidak tersimpan.

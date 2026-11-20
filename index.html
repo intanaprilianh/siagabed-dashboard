@@ -1205,6 +1205,8 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
   root.SiagaEngine = { FS, DT, CFG, makeRng, gauss, median, clamp, Biquad, Hampel, PatientSim, BedMonitor, Ward };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
+<!-- Mode live (?live): data dari hub lewat MQTT + backend. Tanpa ?live, dasbor tetap simulasi. -->
+<script src="live.js"></script>
 
 <script>
 (function () {
@@ -1247,9 +1249,11 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
     { id: '302-D', short: 'DBD', room: '302', bed: 'D', name: 'Tn. Y.T.', age: 38, dx: 'Demam berdarah dengue', no_rm: '00-35-12-89', icd10_code: 'A91', sep_number: '1305R0011026V004236', visit_status: 'Rawat inap, hari ke-2', rr: 18, amp: 52, noise: 4.5 }
   ];
 
-  const ward = new E.Ward(ROSTER, 20261018);
   const PRE = 600;                                   /* detik riwayat sebelum dasbor dibuka */
-  let bootWall = Date.now();
+  const LIVE = window.SiagaLive ? window.SiagaLive.liveOptions() : null;
+  const ward = LIVE ? new window.SiagaLive.LiveWard(ROSTER, Object.assign({ pre: PRE, user: 'Ns. Rina' }, LIVE))
+                    : new E.Ward(ROSTER, 20261018);
+  let bootWall = LIVE ? ward.base : Date.now();
   const wallAt = t => new Date(bootWall + (t - PRE) * 1000);
   let booting = true;
   let selected = '301-B';
@@ -1292,6 +1296,9 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
       case 'tahan_selesai': return { s: 'ditahan', g: 'status', text: 'Keluaran ditahan', det: `${Math.round(d.dur)} dtk karena gerakan; tanpa alarm`, src: 'Pad MI' };
       case 'skenario': return { s: 'info', g: 'sim', text: 'Simulasi', det: SCEN_LABEL[d.name] || d.name, src: 'Simulasi' };
       case 'mulai': return { s: 'info', g: 'sim', text: 'Pemantauan dimulai', det: d.text, src: 'Sistem' };
+      case 'hub_off': return { s: 'teknis', g: 'teknis', text: 'Hub terputus', det: 'Tidak ada data dari hub bedhead; buzzer dan relay di bed tetap bekerja', src: 'Hub' };
+      case 'hub_on': return { s: 'info', g: 'teknis', text: 'Hub tersambung', det: 'Data hub bedhead diterima', src: 'Hub' };
+      case 'kalibrasi': return { s: 'info', g: 'teknis', text: 'Kalibrasi pad', det: `Kalibrasi dua titik tersimpan di hub · selisih ${nf0.format(d.delta || 0)} Hz`, src: 'Hub' };
     }
     return null;
   }
@@ -1329,6 +1336,8 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
       case 'cb_selesai': resolve(id, 'ok', 'Ditangani tim'); setFollow(fu, 'ok', 'Selesai'); break;
       case 'teknis': case 'tahan_lama': setFollow(fu, 'wait', 'Periksa pad'); openRows.set(id + ':t', fu); break;
       case 'teknis_pulih': resolve(id + ':t', 'ok', 'Konektor dipasang'); setFollow(fu, 'ok', 'Selesai'); break;
+      case 'hub_off': setFollow(fu, 'wait', 'Periksa jaringan hub'); openRows.set(id + ':h', fu); break;
+      case 'hub_on': resolve(id + ':h', 'ok', 'Tersambung lagi'); setFollow(fu, 'info', 'Tercatat'); break;
       case 'skenario': case 'mulai': setFollow(fu, 'info', '—'); break;
       default: setFollow(fu, 'info', 'Tercatat');
     }
@@ -1360,8 +1369,10 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
     if (ev.type === 'pra') toast('pra', 'Ponsel perawat', `Pra-alarm · ${where}`, 'Tidak ada napas efektif 20 dtk. Verifikasi dalam 15 dtk.');
     if (ev.type === 'codeblue') toast('codeblue', 'Ponsel Tim Code Blue', `CODE BLUE · ${where}`, d.source === 'manual' ? 'Tombol manual ditekan' : d.source === 'perawat' ? 'Dikonfirmasi perawat' : 'Aktivasi otomatis');
     if (ev.type === 'teknis') toast('teknis', 'Ponsel perawat', `Alarm teknis · ${where}`, 'Sinyal pad hilang');
+    if (ev.type === 'hub_off') toast('teknis', 'Nurse station', `Hub terputus · ${where}`, 'Periksa jaringan atau daya hub bedhead');
   }
-  ward.on(ev => { addLog(ev); if (!booting && ev.bed) notify(ev); });
+  ward.on(ev => { addLog(ev); if (!booting && ev.bed && !ev.hist) notify(ev); });
+  if (LIVE) ward.notice = (ok, what, where, det) => toast(ok ? 'info' : 'teknis', 'Perintah ke hub', `${what} · ${where}`, det);
 
   /* ---------- Suara alarm ---------- */
   let actx = null, nextBeep = 0;
@@ -1446,7 +1457,7 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
       if (s === 'pra') { v = `CB ${Math.max(0, Math.ceil(CFG.verify - (ward.t - m.praT)))} dtk`; st = 'Pra-alarm'; }
       else if (s === 'codeblue') { v = 'Tim dipanggil'; st = 'Code Blue'; }
       else if (s === 'kosong') v = 'kosong';
-      else if (s === 'teknis') { v = m.fault ? 'pad lepas' : 'sinyal'; st = 'Teknis'; }
+      else if (s === 'teknis') { v = LIVE && m.isOffline() ? 'hub offline' : m.fault ? 'pad lepas' : 'sinyal'; st = 'Teknis'; }
       else if (s === 'ditahan') v = 'gerak';
       else { v = rrTxt; if (s === 'waspada') st = 'Waspada'; if (s === 'kritis') st = 'Kritis'; }
       const vh = `<b>${bedLabel(b)}</b><br>${v}${st ? `<span class="q-st">${st}</span>` : ''}`;
@@ -1486,8 +1497,8 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
   const stageSince = new Map();
   ward.on(ev => {
     if (!ev.bed) return;
-    if (['waspada', 'kritis', 'teknis', 'tahan_lama'].includes(ev.type)) stageSince.set(ev.bed.id, ev.t);
-    if (['stabil', 'teknis_pulih', 'kosong', 'kembali'].includes(ev.type)) stageSince.delete(ev.bed.id);
+    if (['waspada', 'kritis', 'teknis', 'tahan_lama', 'hub_off'].includes(ev.type)) stageSince.set(ev.bed.id, ev.t);
+    if (['stabil', 'teknis_pulih', 'kosong', 'kembali', 'hub_on'].includes(ev.type)) stageSince.delete(ev.bed.id);
   });
   const SEV = { kritis: 0, teknis: 1, waspada: 2 };
   const durTxt = sec => { sec = Math.max(0, Math.floor(sec)); return sec < 60 ? `${sec} dtk` : `${Math.floor(sec / 60)} mnt ${pad2(sec % 60)} dtk`; };
@@ -1506,7 +1517,7 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
       const el = watchEl.querySelector(`.wchip[data-id="${x.b.id}"] .wm`);
       if (!el) continue;
       const m = x.b.mon, since = stageSince.has(x.b.id) ? durTxt(ward.t - stageSince.get(x.b.id)) : '';
-      const what = x.s === 'teknis' ? (m.fault ? 'pad terlepas' : 'sinyal tidak andal') : (m.rr !== null ? `RR ${Math.round(m.rr)}/mnt` : 'RR —');
+      const what = x.s === 'teknis' ? (LIVE && m.isOffline() ? 'hub terputus' : m.fault ? 'pad terlepas' : 'sinyal tidak andal') : (m.rr !== null ? `RR ${Math.round(m.rr)}/mnt` : 'RR —');
       setText(el, since ? `${what} · ${since}` : what);
     }
   }
@@ -1663,15 +1674,34 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
     { k: 'turun', t: 'Turun dari bed', d: 'Uji deteksi bed kosong', alt: { k: 'naik', t: 'Berbaring di bed', d: 'Pasien kembali ke pad' } },
     { k: 'cabut', t: 'Cabut konektor pad', d: 'Uji alarm teknis', alt: { k: 'pasang', t: 'Pasang konektor pad', d: 'Pemantauan berlanjut' } }
   ];
+  /* Mode live: kartu simulasi menjadi kontrol hub (perintah lewat backend). */
+  const LIVE_CMDS = [
+    { k: 'CAL_EMPTY', t: 'Kalibrasi pad kosong', d: 'Bed harus kosong · 5 dtk' },
+    { k: 'CAL_OCC', t: 'Kalibrasi pasien berbaring', d: 'Pasien diam di bed · 5 dtk' },
+    { k: 'PING', t: 'Cek hub', d: 'Kirim PING, tunggu balasan' }
+  ];
   const scGrid = $('#sc-grid');
-  const scBtns = SCEN.map(sc => {
+  const scBtns = (LIVE ? LIVE_CMDS : SCEN).map(sc => {
     const btn = document.createElement('button');
     btn.className = 'sc'; btn.type = 'button';
-    btn.addEventListener('click', () => { const k = btn.dataset.k; if (k) { ward.scenario(ward.byId(selected), k); refresh(); } });
+    btn.addEventListener('click', () => {
+      const k = btn.dataset.k;
+      if (k && LIVE) ward.command(ward.byId(selected), k);
+      else if (k) { ward.scenario(ward.byId(selected), k); refresh(); }
+    });
     scGrid.appendChild(btn);
     return { sc, btn, cur: '' };
   });
   function updateScButtons(b) {
+    if (LIVE) {
+      const off = b.mon.isOffline();
+      for (const x of scBtns) {
+        if (x.cur !== x.sc.k) { x.cur = x.sc.k; x.btn.dataset.k = x.sc.k; x.btn.innerHTML = `${x.sc.t}<small>${x.sc.d}</small>`; }
+        x.btn.disabled = off;
+      }
+      $('#btn-manual').disabled = off;
+      return;
+    }
     const s = b.sim;
     for (const x of scBtns) {
       let v = x.sc;
@@ -1689,9 +1719,14 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
     const b = ward.byId(id);
     setText($('#sig-title'), `Sinyal pad · Kamar ${b.room}, Bed ${b.bed}`);
     setText($('#sim-bed'), `Kamar ${b.room} · Bed ${b.bed}`);
-    $('#f-cal').textContent = `Kalibrasi dua titik: pad kosong ${mhz(b.cal.empty)} MHz · pasien berbaring ${mhz(b.cal.occ)} MHz · selisih ${nf0.format(b.cal.empty - b.cal.occ)} Hz`;
+    updateCalText(b);
     refresh();
     if (user && window.matchMedia('(max-width: 1023px)').matches) $('#sig').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function updateCalText(b) {
+    setText($('#f-cal'), b.cal && b.cal.empty != null && b.cal.occ != null
+      ? `Kalibrasi dua titik: pad kosong ${mhz(b.cal.empty)} MHz · pasien berbaring ${mhz(b.cal.occ)} MHz · selisih ${nf0.format(Math.abs(b.cal.empty - b.cal.occ))} Hz`
+      : 'Kalibrasi dua titik: belum diterima dari hub');
   }
   let curSev = '';
   function setOut(id, on) { const e = document.getElementById(id); if (e.dataset.on !== String(on)) e.dataset.on = String(on); if (e.dataset.sev !== curSev) e.dataset.sev = curSev; }
@@ -1708,15 +1743,19 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
     setText($('#v-sqi'), sqiOk ? nf2.format(m.sqi) : '--');
     $('#v-sqi-bar').style.width = `${sqiOk ? m.sqi * 100 : 0}%`;
     $('#v-sqi-bar').style.background = m.held ? 'var(--ink-3)' : 'var(--blue)';
+    const off = LIVE && m.isOffline();   /* mode live: hub tidak mengirim data */
+    const noSig = m.fault || off;
+    const dxTxt = isFinite(m.lastX) ? `Δ ${nf0.format(m.lastX)} Hz dari pad kosong` : 'Δ belum ada kalibrasi';
+    if (LIVE) updateCalText(b);
     const score = Math.max(0, Math.min(1.2, m.dc / m.delta));
-    setText($('#v-pres'), m.fault ? 'Tidak terbaca' : (m.present ? 'Hadir' : 'Kosong'));
-    $('#v-pres-bar').style.width = `${m.fault ? 0 : Math.min(100, score * 100)}%`;
-    $('#v-f').innerHTML = m.fault ? '—' : `${mhz(m.lastF)} MHz`;
-    setText($('#v-f-sub'), m.fault ? 'tidak ada osilasi' : `Δ ${nf0.format(m.lastX)} Hz dari pad kosong`);
+    setText($('#v-pres'), noSig ? 'Tidak terbaca' : (m.present ? 'Hadir' : 'Kosong'));
+    $('#v-pres-bar').style.width = `${noSig ? 0 : Math.min(100, score * 100)}%`;
+    $('#v-f').innerHTML = noSig ? '—' : `${mhz(m.lastF)} MHz`;
+    setText($('#v-f-sub'), off ? 'hub terputus' : m.fault ? 'tidak ada osilasi' : dxTxt);
 
-    $('#n-pad-v').innerHTML = m.fault ? '<b>Tidak ada osilasi</b><br>Konektor pad terlepas?' : `<b>${mhz(m.lastF)} MHz</b><br>Δ ${nf0.format(m.lastX)} Hz dari pad kosong`;
-    $('#n-pad').dataset.hot = String(m.fault);
-    $('#n-dsp-v').innerHTML = m.fault ? 'Menunggu sinyal' :
+    $('#n-pad-v').innerHTML = off ? '<b>Tidak ada data</b><br>Hub bedhead terputus' : m.fault ? '<b>Tidak ada osilasi</b><br>Konektor pad terlepas?' : `<b>${mhz(m.lastF)} MHz</b><br>${dxTxt}`;
+    $('#n-pad').dataset.hot = String(noSig);
+    $('#n-dsp-v').innerHTML = noSig ? 'Menunggu sinyal' :
       `RR <b>${rrShown ? Math.round(m.rr) : '--'}</b> · SQI <b>${nf2.format(m.sqi)}</b><br>${m.present ? 'Pasien hadir' : 'Bed kosong'} · ambang ${nf0.format(m.h)} Hz<br>${m.held ? 'Keluaran ditahan' : 'Keluaran aktif'}`;
     let rule;
     if (s === 'pra') rule = `<b>Pra-alarm</b><br>Code Blue dalam ${Math.ceil(Math.max(0, CFG.verify - (ward.t - m.praT)))} dtk`;
@@ -1741,6 +1780,7 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
   function refresh() {
     updateQueue(); updateKpis(); updateAlerts(); updateWatch(); updateBars(); updateGauge(); updateSignal();
     setText($('#clock'), hms(new Date()));
+    if (LIVE) updateLivePill();
   }
 
   /* ---------- Canvas sinyal ---------- */
@@ -1885,8 +1925,14 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
   function settingsPop(anchor) {
     openPop(anchor, `<h3>Pengaturan</h3>
       <div class="sw-row"><span>Suara alarm<small>Bunyi pra-alarm dan Code Blue di peramban</small></span><button class="sw" type="button" role="switch" id="sw-sound" aria-checked="${soundOn}" aria-label="Suara alarm"></button></div>
-      <div class="sw-row"><span>Mode demo<small>Waspada dan Kritis bertahan 10 dtk, bukan 2 mnt / 1 mnt</small></span><button class="sw" type="button" role="switch" id="sw-demo" aria-checked="${ward.demo}" aria-label="Mode demo"></button></div>`,
+      <div class="sw-row"><span>Mode demo<small>Waspada dan Kritis bertahan 10 dtk, bukan 2 mnt / 1 mnt${LIVE ? ' · dikirim ke semua hub' : ''}</small></span><button class="sw" type="button" role="switch" id="sw-demo" aria-checked="${ward.demo}" aria-label="Mode demo"></button></div>
+      <div class="sw-row"><span>Sumber data<small>${LIVE ? 'Live: hub lewat broker MQTT' : 'Simulasi di peramban'}</small></span><button class="btn btn-white" type="button" id="btn-src">${LIVE ? 'Ganti ke simulasi' : 'Ganti ke live'}</button></div>`,
       p => {
+        p.querySelector('#btn-src').addEventListener('click', () => {
+          const u = new URL(location.href);
+          if (LIVE) u.searchParams.delete('live'); else u.searchParams.set('live', '1');
+          location.href = u.toString();
+        });
         p.querySelector('#sw-sound').addEventListener('click', e => { setSound(!soundOn); e.currentTarget.setAttribute('aria-checked', String(soundOn)); });
         p.querySelector('#sw-demo').addEventListener('click', e => { setDemo(!ward.demo); e.currentTarget.setAttribute('aria-checked', String(ward.demo)); refresh(); });
       });
@@ -1962,6 +2008,7 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
   ];
   let guide = null;
   function startGuide() {
+    if (LIVE) return;   /* demo terpandu memakai skenario simulasi */
     if (!ward.demo) setDemo(true);
     for (const b of ward.beds) if (b.mon.alarm !== 'none') { if (b.mon.alarm === 'pra') ward.cancel(b); else ward.close(b); }
     const g = G();
@@ -1998,11 +2045,31 @@ canvas.cv { display: block; width: 100%; touch-action: pan-y; }
   $('#g-stop').addEventListener('click', stopGuide);
 
   /* ---------- Mulai ---------- */
-  const occupied = ward.beds.filter(b => b.sim.present).length;
-  addLog({ t: 0, type: 'mulai', bed: null, data: { text: `${occupied} pasien terpantau, ${ward.beds.length - occupied} bed kosong; kalibrasi dua titik setiap pad tersimpan` } });
-  for (let i = 0; i < PRE * FS; i++) ward.step();
+  const srcPill = $('.greet .pill');
+  function updateLivePill() {
+    const up = ward.beds.filter(b => !b.mon.isOffline()).length, all = ward.beds.length;
+    const s = ward.conn !== 'tersambung' ? (ward.conn === 'menyambung' ? 'info' : 'teknis') : up === all ? 'stabil' : up ? 'waspada' : 'teknis';
+    const txt = ward.conn === 'tersambung' ? `Live · ${up}/${all} hub online` : `Live · broker ${ward.conn}`;
+    if (srcPill.dataset.s !== s) srcPill.dataset.s = s;
+    setText(srcPill, txt);
+  }
+  if (LIVE) {
+    /* ganti teks yang hanya berlaku untuk simulasi */
+    setText($('#sc-grid').previousElementSibling.querySelector('h2'), 'Kontrol hub · mode live');
+    $('#btn-manual').nextElementSibling.innerHTML = '<b>Tombol Code Blue manual.</b> Di mode live, tombol ini mengirim perintah MANUAL ke hub untuk menguji jalur tombol. Tercatat di log dan database.';
+    btnGuide.hidden = true;
+    setText($('#k3-go').previousElementSibling, 'Alarm hari ini');
+    setText($('#k-alarm-cap'), 'Pra-alarm dan aktivasi tombol manual hari ini, termasuk yang dibatalkan.');
+    setText($('.foot'), 'Mode live SiagaBed: data dari hub bedhead (ESP32 atau hub palsu) lewat broker MQTT, log dan perintah lewat server lokal. Keputusan alarm diambil di hub. Nama pasien fiktif. Belum diuji pada manusia dan bukan alat diagnosis.');
+    updateLivePill();
+    ward.start();
+  } else {
+    const occupied = ward.beds.filter(b => b.sim.present).length;
+    addLog({ t: 0, type: 'mulai', bed: null, data: { text: `${occupied} pasien terpantau, ${ward.beds.length - occupied} bed kosong; kalibrasi dua titik setiap pad tersimpan` } });
+    for (let i = 0; i < PRE * FS; i++) ward.step();
+    bootWall = Date.now();
+  }
   booting = false;
-  bootWall = Date.now();
   rebuildBars();
   select(selected, false);
   requestAnimationFrame(frame);
