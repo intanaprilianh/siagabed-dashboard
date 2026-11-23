@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><title>S4 · A · Halaman penuh · light</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF3F9;--bgTop:#CFE1F6;--glowA:rgba(150,196,245,.75);--glowB:rgba(175,226,228,.6);--glowC:rgba(255,190,180,.45);
+  --glass:rgba(255,255,255,.58);--glass2:rgba(255,255,255,.82);--solid:#FFFFFF;--edge:rgba(255,255,255,.95);--hair:rgba(16,32,64,.09);
+  --tx:#0D1626;--tx2:#46536A;--tx3:#5F6C80;
+  --hi:#D7262B;--hiText:#C01F24;--hiSoft:rgba(215,38,43,.09);--hiEdge:rgba(215,38,43,.35);--onHi:#FFFFFF;
+  --md:#9A5B00;--mdDot:#E59A11;--mdSoft:rgba(229,154,17,.13);
+  --lo:#1F5E9E;--loSoft:rgba(31,94,158,.10);
+  --ok:#1E8048;--okSoft:rgba(30,128,72,.10);
+  --shadow:0 12px 32px rgba(32,64,112,.10),0 2px 6px rgba(32,64,112,.05);
+  --pillOn:#FFFFFF;--pillOnTx:#0D1626;--ink:#0D1626;--onInk:#FFFFFF;--hatch:rgba(31,94,158,.07);--cbBg:#7A0E13;--sel:#0D1626;--focus:#2F6FED;--solidA:#F3F6FA;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'Inter',sans-serif;color:var(--tx);font-feature-settings:'cv11' 1;
+  background:
+    radial-gradient(900px 520px at 12% -6%,var(--glowA),transparent 70%),
+    radial-gradient(800px 500px at 78% 4%,var(--glowB),transparent 70%),
+    radial-gradient(700px 520px at 22% 62%,var(--glowC),transparent 70%),
+    linear-gradient(180deg,var(--bgTop) 0%,var(--bg) 46%);}
+.glass{background:var(--glass);backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);border:1px solid var(--edge);box-shadow:var(--shadow)}
+.glass2{background:var(--glass2);backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);border:1px solid var(--edge);box-shadow:var(--shadow)}
+.sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;font-size:15px;color:var(--tx2);white-space:nowrap}
+.pill b{color:var(--tx);font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.logo{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:600;letter-spacing:-.01em}
+.logo .mk{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center}
+.nav{display:flex;gap:4px;padding:5px;border-radius:999px}
+.nav a{height:40px;padding:0 20px;border-radius:999px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;color:var(--tx2)}
+.nav a.on{background:var(--pillOn);color:var(--pillOnTx);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.rbtn{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.av{width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--onInk);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;font-weight:600;white-space:nowrap;font-size:16px;height:48px;padding:0 22px}
+.btn.call{background:var(--hi);color:var(--onHi);box-shadow:0 10px 24px rgba(215,38,43,.32)}
+.btn.hold{border:1.5px dashed var(--hiEdge);color:var(--tx)}
+.btn.hold small{font-size:12px;color:var(--tx3);font-weight:500;padding:3px 8px;border-radius:999px;background:var(--hiSoft)}
+.btn.ink{background:var(--ink);color:var(--onInk)}
+.btn.ghost{border:1px solid var(--hair);background:var(--glass2);color:var(--tx)}
+.lv{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.tag{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.tag.hi{background:var(--hiSoft);color:var(--hiText)}
+.tag.md{background:var(--mdSoft);color:var(--md)}
+.tag.lo{background:var(--loSoft);color:var(--lo)}
+.tag.ok{background:var(--okSoft);color:var(--ok)}
+.tag.q{background:var(--hair);color:var(--tx2)}
+.ticks{display:flex;gap:4px}
+.ticks i{display:block;width:12px;height:30px;border-radius:6px;background:var(--hi)}
+.ticks i.off{background:var(--hiSoft);box-shadow:inset 0 0 0 1px var(--hiEdge)}
+.ordb{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:var(--ink);color:var(--onInk)}
+.muted{color:var(--tx3)}
+
+/* tile bed (dipakai bersama) */
+.bed{position:relative;border-radius:20px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.bed .bh{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.bed .bn{font-size:24px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.bed .bs{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;line-height:1.2}
+.bed .bp{font-size:14px;color:var(--tx2);line-height:1.35}
+.bed .bp b{color:var(--tx);font-weight:600}
+.bed .bv{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:4px;white-space:nowrap}
+.bed .num{font-feature-settings:'tnum' 1;font-size:38px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.bed .num small{font-size:14px;font-weight:500;color:var(--tx3);margin-left:3px;letter-spacing:0}
+.bed .bv em{font-style:normal;font-size:12px;color:var(--tx3)}
+.bed .ordb{width:26px;height:26px;font-size:13px}
+.bed.pra{background:var(--hi);border-color:transparent;color:var(--onHi);box-shadow:0 14px 30px rgba(215,38,43,.35)}
+.bed.pra .bp,.bed.pra .bp b,.bed.pra .num small,.bed.pra .bv em,.bed.pra .bs{color:var(--onHi)}
+.bed.pra .ordb{background:#fff;color:#C01F24}
+.bed.kr{box-shadow:inset 0 0 0 2px var(--hiEdge),var(--shadow)}
+.bed.kr .bs{color:var(--hiText)} .bed.kr .ordb{background:var(--hi);color:#fff}
+.bed.ws{box-shadow:inset 0 0 0 2px var(--mdDot),var(--shadow)}
+.bed.ws .bs{color:var(--md)} .bed.ws .ordb{background:var(--mdDot);color:#1B1200}
+.bed.tk{border:1.5px dashed var(--lo);background-image:repeating-linear-gradient(135deg,transparent 0 10px,var(--hatch) 10px 20px)}
+.bed.tk .bs{color:var(--lo)} .bed.tk .ordb{background:var(--lo);color:#fff}
+.bed.ok .bs{color:var(--ok)}
+.bed.empty{background:transparent;border:1.5px dashed var(--hair);box-shadow:none}
+.bed.empty .bn{color:var(--tx3)}
+.bed.away .bs{color:var(--tx2)}
+
+
+.s-ok{}
+.s-pra{background:var(--hi)!important;color:var(--onHi);border-color:transparent!important;box-shadow:0 12px 26px rgba(215,38,43,.34)}
+.s-cb{background:var(--cbBg)!important;color:#fff;border-color:transparent!important;box-shadow:0 12px 26px rgba(122,14,19,.34)}
+.s-kr{background:linear-gradient(var(--hiSoft),var(--hiSoft)),var(--glass2);box-shadow:inset 0 0 0 2px var(--hiEdge),var(--shadow)}
+.s-ws{background:linear-gradient(var(--mdSoft),var(--mdSoft)),var(--glass2);box-shadow:inset 0 0 0 2px var(--mdDot),var(--shadow)}
+.s-tk{border:1.5px dashed var(--lo)!important;background-image:repeating-linear-gradient(135deg,transparent 0 10px,var(--hatch) 10px 20px)}
+.s-away{}
+.s-empty{background:transparent!important;border:1.5px dashed var(--hair)!important;box-shadow:none!important;backdrop-filter:none!important}
+.s-ok .st{color:var(--ok)} .s-kr .st{color:var(--hiText)} .s-ws .st{color:var(--md)} .s-tk .st{color:var(--lo)}
+.s-away .st{color:var(--tx2)} .s-empty .st,.s-empty .id{color:var(--tx3)}
+.s-pra .st,.s-cb .st,.s-pra .sub,.s-cb .sub{color:#fff}
+.ob{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
+.s-pra .ob{background:#fff;color:#C01F24} .s-kr .ob{background:var(--hi);color:#fff}
+.s-ws .ob{background:var(--mdDot);color:#1B1200} .s-tk .ob{background:var(--lo);color:#fff}
+.sel{box-shadow:inset 0 0 0 2px var(--hiEdge),0 0 0 4px var(--bg),0 0 0 7px var(--sel)!important}
+
+/* legenda status */
+.lgd{display:flex;flex-wrap:wrap;gap:8px}
+.lgc{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:10px;font-size:13px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.lgc.s-ok{background:var(--glass2);color:var(--ok);border-color:var(--hair)}
+.lgc.s-kr{color:var(--hiText);box-shadow:inset 0 0 0 1.5px var(--hiEdge)}
+.lgc.s-ws{color:var(--md);box-shadow:inset 0 0 0 1.5px var(--mdDot)}
+.lgc.s-tk{color:var(--lo)}
+.lgc.s-away{background:var(--hair);color:var(--tx2)}
+.lgc.s-empty{color:var(--tx3)}
+.lgc.s-pra,.lgc.s-cb{box-shadow:none}
+.lgc.zero{background:transparent!important;color:var(--tx3)!important;border:1px solid var(--hair)!important;box-shadow:none!important}
+.lgc.zero svg{opacity:.55}
+.lgc .n{font-feature-settings:'tnum' 1;font-weight:700}
+
+.top{position:absolute;left:24px;right:24px;top:20px;height:72px;border-radius:24px;display:flex;align-items:center;gap:24px;padding:0 14px 0 18px}
+.ward{font-size:16px;color:var(--tx2)}.ward b{color:var(--tx);font-weight:600}
+.clock{font-feature-settings:'tnum' 1;font-size:30px;font-weight:600;letter-spacing:-.02em;padding:0 10px}
+.wrap{position:absolute;left:24px;right:24px;top:112px;bottom:24px;display:grid;gap:20px}
+.left{display:flex;flex-direction:column;gap:14px;min-width:0}
+.hd{display:flex;align-items:baseline;gap:14px;padding:6px 8px 2px}
+.hd h1{font-size:30px;font-weight:600;letter-spacing:-.02em}
+.hd span{font-size:15px;color:var(--tx3)}
+.qi{border-radius:28px;padding:22px 26px}
+.qi.pra{background:linear-gradient(150deg,var(--hiSoft),transparent 55%),var(--glass2);box-shadow:inset 0 0 0 2px var(--hiEdge),var(--shadow)}
+.qh{display:flex;align-items:center;gap:10px}
+.qh .s{font-size:14px;color:var(--tx3);margin-left:6px}
+.qi.pra .lv{color:var(--hiText)}
+.qi.pra .id{display:flex;align-items:flex-end;gap:26px;margin:16px 0 0}
+.qi.pra .bedbig{font-size:120px;font-weight:700;letter-spacing:-.05em;line-height:.85}
+.qi.pra .pt{font-size:20px;color:var(--tx2);line-height:1.4;padding-bottom:4px}
+.qi.pra .pt b{color:var(--tx);font-weight:600}
+.qi.pra .why{display:flex;align-items:center;gap:28px;margin:20px 0;padding:16px 20px;border-radius:20px;background:var(--hiSoft)}
+.qi.pra .why .r{font-size:38px;font-weight:600;letter-spacing:-.02em}
+.qi.pra .why .r small{font-size:18px;color:var(--tx2);font-weight:500;letter-spacing:0;margin-left:4px}
+.qi.pra .why .cdt{font-size:15px;color:var(--tx2);line-height:1.3}
+.qi.pra .why .cdt b{display:block;font-size:28px;color:var(--tx);font-weight:600}
+.qi.pra .acts{display:flex;gap:12px}
+.qi.pra .btn.call{height:72px;font-size:21px;padding:0 34px}
+.qi.pra .btn.hold{height:72px;font-size:17px;padding:0 26px}
+.ri{border-radius:24px;padding:16px 22px;display:grid;grid-template-columns:190px 150px 290px 1fr auto;align-items:center;gap:16px}
+.ri .lv{display:flex;align-items:center;gap:8px}
+.ri .bid{font-size:40px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.ri .pt{font-size:15px;color:var(--tx2);line-height:1.35}.ri .pt b{color:var(--tx);font-weight:600}
+.ri .why{font-size:16px;line-height:1.35}.ri .why small{display:block;font-size:14px;color:var(--tx3)}
+.ri .acts{display:flex;gap:8px}
+.ri .btn{height:44px;font-size:15px;padding:0 18px}
+.ri.kr{box-shadow:inset 0 0 0 1.5px var(--hiEdge),var(--shadow)}.ri.kr .lv{color:var(--hiText)}
+.ri.ws .lv{color:var(--md)}.ri.tk .lv{color:var(--lo)}
+.ri.ws .bid,.ri.tk .bid{font-size:32px}
+.foot{margin-top:auto;padding:12px 18px;border-radius:20px;font-size:14px;color:var(--tx3);display:flex;gap:24px}
+.foot b{color:var(--tx2);font-weight:600}
+.panel{border-radius:32px;padding:22px;display:flex;flex-direction:column;min-width:0}
+.rhd{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 14px}
+.rhd h2{font-size:21px;font-weight:600}
+.rhd .cnt{font-size:15px;color:var(--tx2)}.rhd .cnt b{font-size:26px;color:var(--tx);font-weight:600;margin-right:6px}
+.corr{border-radius:18px;border:1px dashed var(--hair);height:52px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:13px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
+.hint{font-size:13px;color:var(--tx3)}
+.x{width:36px;height:36px;border-radius:50%;border:1px solid var(--hair);display:inline-flex;align-items:center;justify-content:center;font-size:18px;color:var(--tx2);flex:none}
+
+.s-kr{background:var(--hi)!important;color:#fff;border-color:transparent!important;box-shadow:0 12px 26px rgba(215,38,43,.34)}
+.s-kr .st,.s-kr .sub,.s-kr .id{color:#fff}
+.s-kr .ob{background:#fff;color:#C01F24}
+.cb.s-kr.sel{box-shadow:0 0 0 4px var(--bg),0 0 0 7px var(--sel)!important}
+.s-pra{background:linear-gradient(var(--hiSoft),var(--hiSoft)),var(--glass2)!important;color:var(--tx);box-shadow:inset 0 0 0 3px var(--hi),var(--shadow)}
+.s-pra .st,.s-pra .sub{color:var(--hiText)}
+.s-pra .ob{background:var(--hi);color:#fff}
+.lgc.s-kr{background:var(--hi)!important;color:#fff;box-shadow:none}
+.lgc.s-pra{background:var(--hiSoft)!important;color:var(--hiText);box-shadow:inset 0 0 0 1.5px var(--hi)}
+
+/* 1 · Code Blue: merah tua, bingkai putih, kata kapital */
+.s-cb{background:var(--cbBg)!important;color:#fff;box-shadow:inset 0 0 0 3px #fff,0 0 0 1.5px var(--cbBg),0 12px 26px rgba(122,14,19,.38)!important}
+.s-cb .st{text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+.s-cb .id,.s-cb .sub,.s-cb .cd{color:#fff}
+.s-cb .ob{background:#fff;color:var(--cbBg)}
+.lgc.s-cb:not(.zero){background:var(--cbBg)!important;color:#fff;box-shadow:inset 0 0 0 2px #fff,0 0 0 1px var(--cbBg)}
+/* 2 · Pra-alarm bening + hitung mundur + denyut */
+.s-pra{box-shadow:inset 0 0 0 4px var(--hi),var(--shadow)!important;animation:prp 1.6s ease-in-out infinite}
+@keyframes prp{50%{box-shadow:inset 0 0 0 7px var(--hi),var(--shadow)}}
+@media (prefers-reduced-motion:reduce){.s-pra{animation:none}}
+.cd{font-size:20px;font-weight:800;color:var(--hiText);font-feature-settings:'tnum' 1;line-height:1.05;white-space:nowrap}
+/* 9 · fokus keyboard */
+.focus{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--focus)!important}
+.s-load{background:var(--hair)!important;border:1px dashed var(--hair)!important;box-shadow:none!important}
+.s-load .st,.s-load .sub{color:var(--tx3)}
+.s-load .id{color:var(--tx2)}
+.lgc.s-load{background:var(--hair);color:var(--tx2)}
+
+/* tile lega (≤ 8 bed) — 6 · kata status 16 px, keterangan 14 px */
+.room{position:relative;border-radius:22px;border:1px solid var(--hair);padding:12px}
+.room .rl{display:flex;justify-content:space-between;align-items:baseline;padding:2px 6px 10px}
+.room .rl b{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)}
+.room .rl span{font-size:13px;color:var(--tx3)}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.cb{position:relative;height:150px;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.cb .h{display:flex;align-items:center;justify-content:space-between}
+.cb .id{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.cb .gl{margin-top:auto;height:24px;display:flex;align-items:center}
+.cb .st{font-size:16px;font-weight:700;line-height:1.15}
+.cb .sub{font-size:14px;color:var(--tx3);line-height:1.2;white-space:nowrap}
+
+/* tile rapat (24 bed, 1366) */
+.rows{display:flex;flex-direction:column;gap:8px}
+.rr{display:grid;grid-template-columns:62px repeat(4,minmax(0,1fr));gap:8px}
+.rr .rn{display:flex;flex-direction:column;justify-content:center;padding-left:6px}
+.rr .rn b{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.rr .rn span{font-size:12px;color:var(--tx3)}
+.cbd{position:relative;height:78px;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.cbd .h{display:flex;align-items:center;gap:6px}
+.cbd .id{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1}
+.cbd .ob{margin-left:auto;width:20px;height:20px;font-size:11px}
+.cbd .st{font-size:14px;font-weight:700;line-height:1.1;white-space:nowrap}
+.cbd .sub{font-size:13px;color:var(--tx3);line-height:1.1;white-space:nowrap}
+.cbd .cd{font-size:15px}
+.cbd.s-cb .st{font-size:13px}
+
+/* pita detail (band) — 9 · tombol Tutup */
+.band{position:relative;margin-top:14px;border-radius:18px;padding:18px 20px;display:grid;grid-template-columns:1fr 230px;grid-template-rows:auto auto;gap:14px 20px;
+  background:var(--glass2);border:1px solid var(--edge);box-shadow:inset 0 0 0 1.5px var(--hiEdge),var(--shadow)}
+.band:before{content:"";position:absolute;top:-9px;left:var(--notch);width:16px;height:16px;transform:rotate(45deg);background:var(--glass2);border-left:1.5px solid var(--hiEdge);border-top:1.5px solid var(--hiEdge);border-radius:3px 0 0 0}
+.band .who{font-size:19px;font-weight:600}
+.band .who small{display:block;font-size:14px;font-weight:400;color:var(--tx2);margin-top:4px;line-height:1.35}
+.band .rrv{margin-top:12px;font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1;font-feature-settings:'tnum' 1}
+.band .rrv small{font-size:15px;font-weight:500;color:var(--tx2);letter-spacing:0;margin-left:3px}
+.band .rrc{font-size:14px;color:var(--hiText);font-weight:600;margin-top:6px}
+.band .acts{grid-column:1/3;display:flex;gap:10px;align-items:center}
+.band .acts .btn{height:44px;font-size:15px}
+.band .acts .close{margin-left:auto}
+
+/* 3 · item antrean Kritis merah penuh */
+.ri.kr{background:var(--hi)!important;color:#fff;border-color:transparent!important;box-shadow:0 14px 30px rgba(215,38,43,.30)!important}
+.ri.kr .lv,.ri.kr .bid,.ri.kr .pt,.ri.kr .pt b,.ri.kr .why,.ri.kr .why small,.ri.kr .why b{color:#fff}
+.ri.kr .ordb{background:#fff!important;color:#C01F24!important}
+.btn.onred{background:#fff;color:#B81D22}
+.btn.onred2{border:1.5px solid rgba(255,255,255,.75);color:#fff}
+/* item Pra-alarm ringkas (saat ada Code Blue di atasnya) */
+.ri.prar{background:linear-gradient(var(--hiSoft),var(--hiSoft)),var(--glass2);box-shadow:inset 0 0 0 3px var(--hi),var(--shadow)}
+.ri.prar .lv{color:var(--hiText)}
+.ri.prar .why{display:flex;align-items:center;gap:14px}
+.ri.prar .ticks i{width:7px;height:20px;border-radius:4px}
+.ri.prar .btn.call{height:48px;font-size:15px;padding:0 18px;box-shadow:none}
+.ri.prar .btn.hold{height:48px;font-size:14px;padding:0 14px}
+/* kartu Code Blue besar */
+.qi.cbk{background:var(--cbBg);color:#fff;box-shadow:inset 0 0 0 4px #fff,0 0 0 1.5px var(--cbBg),0 20px 44px rgba(122,14,19,.35)}
+.qi.cbk .lv{color:#fff;font-size:16px;letter-spacing:.1em}
+.qi.cbk .qh .s{color:rgba(255,255,255,.85)}
+.qi.cbk .id{display:flex;align-items:flex-end;gap:26px;margin:14px 0 0}
+.qi.cbk .bedbig{font-size:104px;font-weight:700;letter-spacing:-.05em;line-height:.85}
+.qi.cbk .pt{font-size:19px;line-height:1.4;padding-bottom:4px;color:rgba(255,255,255,.92)}
+.qi.cbk .pt b{color:#fff}
+.qi.cbk .why{display:flex;align-items:center;gap:24px;margin:16px 0;padding:14px 18px;border-radius:18px;background:rgba(255,255,255,.12)}
+.qi.cbk .why .r{font-size:34px;font-weight:600;letter-spacing:-.02em;font-feature-settings:'tnum' 1}
+.qi.cbk .why .r small{font-size:16px;font-weight:500;letter-spacing:0;margin-left:6px;opacity:.9}
+.qi.cbk .why .t{font-size:15px;line-height:1.35;opacity:.95}
+.qi.cbk .acts{display:flex;gap:12px}
+.qi.cbk .btn{height:64px;font-size:19px;padding:0 30px}
+/* 5 · status kiriman */
+.btn.sending{background:var(--hair);color:var(--tx2);gap:10px}
+.ri.kr .btn.sending{background:rgba(255,255,255,.18);color:#fff}
+.sendnote{font-size:13px;color:inherit;opacity:.9}
+.fail{display:flex;align-items:center;gap:16px;margin-top:14px;padding:14px 18px;border-radius:18px;background:var(--mdSoft);box-shadow:inset 0 0 0 1.5px var(--mdDot)}
+.fail .t{font-size:16px;line-height:1.35}.fail .t b{display:block;font-size:17px}
+.fail .btn{height:44px;font-size:15px;margin-left:auto}
+.pillwarn{color:var(--md)!important}.pillwarn b{color:var(--md)!important}
+.mdot{width:8px;height:8px;border-radius:50%;background:var(--mdDot);display:inline-block}
+/* 5 · antrean kosong dan memuat */
+.calm{border-radius:28px;padding:34px 34px 30px;display:flex;flex-direction:column;gap:14px}
+.calm .h{display:flex;align-items:center;gap:16px}
+.calm h2{font-size:36px;font-weight:600;letter-spacing:-.02em}
+.calm p{font-size:18px;color:var(--tx2);line-height:1.45}
+.calm .last{margin-top:10px;border-top:1px solid var(--hair)}
+.calm .last div{display:grid;grid-template-columns:70px 1fr;gap:12px;padding:12px 2px;border-bottom:1px solid var(--hair);font-size:15px;color:var(--tx2)}
+.calm .last div span:first-child{color:var(--tx3);font-feature-settings:'tnum' 1}
+.calm .last div b{color:var(--tx);font-weight:600}
+.calm .k{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-top:6px}
+.skel{height:76px;border-radius:24px;background:var(--hair);opacity:.7}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips span{height:32px;padding:0 12px;border-radius:10px;background:var(--hair);display:inline-flex;align-items:center;font-size:15px;font-weight:600}
+.lgc.zero.s-kr,.lgc.zero.s-pra,.lgc.zero.s-cb{background:transparent!important;color:var(--tx3)!important;box-shadow:inset 0 0 0 1px var(--hair)!important}
+.cb.s-kr .sub,.cbd.s-kr .sub,.cb.s-cb .sub,.cbd.s-cb .sub{color:#fff}
+/* 24 bed: antrean lebih padat */
+.dense .qi.cbk{padding:18px 24px}
+.dense .qi.cbk .bedbig{font-size:84px}
+.dense .qi.cbk .why{margin:12px 0;padding:10px 16px}
+.dense .qi.cbk .why .r{font-size:28px}
+.dense .qi.cbk .btn{height:54px;font-size:17px}
+.dense .ri{padding:12px 20px;grid-template-columns:170px 110px 230px 1fr auto}
+.dense .ri .bid{font-size:34px}.dense .ri.ws .bid,.dense .ri.tk .bid{font-size:30px}
+.ri.prar .why{white-space:nowrap}
+.ri.prar .why small{display:block;font-size:14px;color:var(--hiText);font-weight:700}
+
+.k{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)}
+.card{border-radius:24px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.strip{position:absolute;left:24px;right:24px;top:104px;height:60px;border-radius:20px;display:flex;align-items:center;gap:16px;padding:0 10px 0 20px;
+  background:linear-gradient(var(--hiSoft),var(--hiSoft)),var(--glass2);box-shadow:inset 0 0 0 3px var(--hi),var(--shadow);font-size:17px}
+.strip b{font-weight:700}.strip .cd{font-size:18px}
+.strip .btn{height:44px;font-size:15px}
+.strip .btn.call{box-shadow:none}
+.hdr{display:flex;align-items:center;gap:22px}
+.back{height:44px;padding:0 16px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--tx2)}
+.hbed{font-size:72px;font-weight:700;letter-spacing:-.04em;line-height:.9}
+.hpt{font-size:20px;line-height:1.35;color:var(--tx2)}.hpt b{color:var(--tx);font-weight:600}
+.kchip{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:12px;background:var(--hi);color:#fff;font-size:18px;font-weight:700}
+.reason{font-size:22px;line-height:1.35}.reason b{font-weight:700}
+.reason small{display:block;font-size:15px;color:var(--tx3);margin-top:4px}
+.rrbig{font-size:84px;font-weight:600;letter-spacing:-.04em;line-height:.9;font-feature-settings:'tnum' 1}
+.rrbig small{font-size:22px;font-weight:500;color:var(--tx2);letter-spacing:0;margin-left:6px}
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--hair)}
+.seg span{height:30px;padding:0 12px;border-radius:999px;display:inline-flex;align-items:center;font-size:13px;font-weight:600;color:var(--tx2)}
+.seg span.on{background:var(--solid);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.apbar{position:relative;height:16px;border-radius:8px;background:var(--hair);margin-top:8px}
+.apbar i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:var(--ok)}
+.apbar .th{position:absolute;top:-6px;bottom:-6px;width:3px;background:var(--hi);border-radius:2px}
+.apl{display:flex;justify-content:space-between;font-size:12px;color:var(--tx3);margin-top:6px}
+.sq{display:grid;grid-template-columns:1fr auto;gap:10px 14px;font-size:15px;color:var(--tx2)}
+.sq b{color:var(--tx);font-weight:600;text-align:right}
+.tl div{display:grid;grid-template-columns:74px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--hair);font-size:14px;color:var(--tx2);line-height:1.35}
+.tl div span:first-child{color:var(--tx3);font-feature-settings:'tnum' 1}
+.tl b{color:var(--tx);font-weight:600}
+.idg{display:grid;grid-template-columns:120px 1fr;gap:8px 12px;font-size:15px}
+.idg span{color:var(--tx3)}.idg b{font-weight:600}
+.tech{display:flex;align-items:center;justify-content:space-between;height:52px;padding:0 18px;border-radius:16px;font-size:15px;font-weight:600;color:var(--tx2)}
+.wv{display:block}
+.wl{display:flex;justify-content:space-between;font-size:12px;color:var(--tx3)}
+.legendw{display:flex;gap:16px;font-size:13px;color:var(--tx3);align-items:center}
+.legendw i{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--ok);margin-right:6px;vertical-align:-1px}
+
+.main{position:absolute;left:24px;right:24px;top:180px;bottom:24px;display:flex;flex-direction:column;gap:18px}
+.grid{flex:1;display:grid;grid-template-columns:1fr 440px;gap:18px;min-height:0}
+.col{display:flex;flex-direction:column;gap:16px;min-height:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+</style></head>
+<body>
+
+<header class="top glass">
+  <div class="logo"><span class="mk glass2" style="width:40px;height:40px;border-radius:12px"><svg width="24" height="24" viewBox="0 0 30 30" fill="none"><rect x="1.5" y="1.5" width="27" height="27" rx="8" style="stroke:var(--tx)" stroke-width="2.2"/><rect x="7.5" y="7.5" width="15" height="15" rx="4.5" style="stroke:var(--tx)" stroke-width="2.2"/><rect x="12" y="12" width="6" height="6" rx="2" style="fill:var(--tx)"/></svg></span>SiagaBed</div>
+  <div class="ward"><b>Bangsal Melati</b> · Lantai 3</div>
+  <nav class="nav glass2"><a class="on">Bangsal</a><a>Log</a><a>Bantuan</a><a>Tim</a></nav>
+  <div class="sp"></div>
+  <span class="pill glass2"><b>Ns. Rina</b> · jaga</span>
+  <span class="pill glass2"><svg width="18" height="18" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10l-4-3H2z" style="fill:var(--tx)"/><path d="M11 5.5c1 .8 1 4.2 0 5M13 3.5c2 1.8 2 7.2 0 9" style="fill:none;stroke:var(--tx)" stroke-width="1.4" stroke-linecap="round"/></svg><b>Suara aktif</b></span>
+  <span class="pill glass2"><span class="dot"></span><b>Live</b> · 8 hub</span>
+  <span class="pill glass2"><b>7/8</b> terpantau</span>
+  <span class="clock">10.53</span>
+</header><div class="strip"><svg width="22" height="22" viewBox="0 0 22 22"><path d="M7 1h8l6 6v8l-6 6H7l-6-6V7z" style="fill:var(--hi)"/><rect x="9.7" y="5" width="2.6" height="7.5" style="fill:#fff"/><rect x="9.7" y="14.5" width="2.6" height="2.6" style="fill:#fff"/></svg><span><b>301-B · Ny. R.W.</b> Pra-alarm · 26 dtk tanpa napas efektif</span><span class="cd">CB 9 dtk</span>
+<span class="sp"></span><span class="btn call"><svg width="20" height="20" viewBox="0 0 22 22"><path d="M4 2h4l2 5-2.5 1.5a11 11 0 0 0 6 6L15 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2 4a2 2 0 0 1 2-2z" style="fill:#fff"/></svg>Panggil Code Blue</span><span class="btn ghost">Ke antrean</span></div>
+<div class="main"><div class="hdr"><span class="back glass2">← Bangsal</span><span class="hbed">302-C</span><span class="kchip"><svg width="18" height="18" viewBox="0 0 22 20"><path d="M11 1.5l10 17H1z" style="fill:none;stroke:#fff" stroke-width="2.4" stroke-linejoin="round"/><rect x="9.8" y="7" width="2.4" height="6" style="fill:#fff"/><rect x="9.8" y="14.6" width="2.4" height="2.4" style="fill:#fff"/></svg>Kritis</span>
+<span class="hpt"><b>Ny. D.A.</b> · 60<br>PPOK eksaserbasi</span><span class="sp"></span><span class="btn ink" style="height:52px;font-size:17px">Sudah dicek</span><span class="btn ghost" style="height:52px;font-size:17px">Tulis tindak lanjut</span></div>
+  <div class="grid">
+    <div class="col">
+      <div class="row2"><div class="card glass" style="box-shadow:inset 0 0 0 2px var(--hiEdge),var(--shadow)"><div class="k">Kenapa Kritis</div>
+<div class="reason"><b style="color:var(--hiText)">RR 31 /mnt ↑</b> · ≥ 30 selama 1 mnt 20 dtk<small>Mulai 10.51.40 · berbunyi 1× · belum dicek sejak Kritis</small></div></div><div class="card glass"><div class="k">Henti napas</div><div><div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:40px;font-weight:600;letter-spacing:-.02em;font-feature-settings:'tnum' 1">2 dtk</span>
+<span style="font-size:15px;color:var(--tx2)">sejak napas efektif terakhir</span></div>
+<div class="apbar"><i style="width:10%"></i><span class="th" style="left:calc(100% - 3px)"></span></div>
+<div class="apl"><span>0</span><span style="color:var(--hiText);font-weight:600">20 dtk → Pra-alarm</span></div></div></div></div>
+      <div class="card glass"><div style="display:flex;align-items:flex-end;gap:24px"><div><div class="k">Laju napas</div><div class="rrbig">31<small>/mnt ↑</small></div></div>
+<span class="sp"></span><span class="seg"><span class="on">30 mnt</span><span>2 jam</span><span>Shift</span></span></div><svg width="1300" height="168" viewBox="0 0 1300 168" style="overflow:visible">
+  <line x1="0" x2="1300" y1="34.6" y2="34.6" style="stroke:var(--hiEdge)" stroke-width="1.2" stroke-dasharray="4 4"/>
+  <line x1="0" x2="1300" y1="92.3" y2="92.3" style="stroke:var(--mdDot)" stroke-width="1.2" stroke-dasharray="4 4" opacity=".8"/>
+  <text x="1300" y="29.6" text-anchor="end" style="fill:var(--hiText);font-size:11px;font-weight:600">30 Kritis</text>
+  <text x="1300" y="87.3" text-anchor="end" style="fill:var(--md);font-size:11px;font-weight:600">20 Waspada</text>
+  <polyline points="0.0,98.1 44.8,98.1 89.7,92.3 134.5,92.3 179.3,86.5 224.1,86.5 269.0,80.8 313.8,80.8 358.6,80.8 403.4,75.0 448.3,75.0 493.1,69.2 537.9,69.2 582.8,63.5 627.6,63.5 672.4,57.7 717.2,57.7 762.1,51.9 806.9,51.9 851.7,51.9 896.6,46.2 941.4,46.2 986.2,40.4 1031.0,40.4 1075.9,34.6 1120.7,34.6 1165.5,28.8 1210.3,28.8 1255.2,28.8 1300.0,28.8" style="fill:none;stroke:var(--tx)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="1300" cy="28.8" r="4.5" style="fill:var(--hi)"/>
+  <text x="0" y="166" style="fill:var(--tx3);font-size:11px">10.23</text>
+  <text x="1300" y="166" text-anchor="end" style="fill:var(--tx3);font-size:11px">10.53</text>
+</svg></div>
+      <div class="card glass"><div style="display:flex;align-items:center;gap:16px"><div class="k">Gelombang napas · live</div><span class="sp"></span>
+<span class="legendw"><span><i></i>napas efektif</span><span>25 sampel/dtk</span></span></div><svg class="wv" width="1300" height="120" viewBox="0 0 1300 120"><line x1="216.7" x2="216.7" y1="0" y2="120" style="stroke:var(--hair)" stroke-width="1"/><line x1="433.3" x2="433.3" y1="0" y2="120" style="stroke:var(--hair)" stroke-width="1"/><line x1="650.0" x2="650.0" y1="0" y2="120" style="stroke:var(--hair)" stroke-width="1"/><line x1="866.7" x2="866.7" y1="0" y2="120" style="stroke:var(--hair)" stroke-width="1"/><line x1="1083.3" x2="1083.3" y1="0" y2="120" style="stroke:var(--hair)" stroke-width="1"/><polyline points="0.0,60.0 2.2,54.2 4.3,48.5 6.5,43.0 8.7,37.8 10.8,33.2 13.0,29.2 15.2,25.9 17.3,23.6 19.5,22.1 21.7,21.7 23.8,22.2 26.0,23.8 28.2,26.4 30.3,29.9 32.5,34.2 34.7,39.3 36.8,45.0 39.0,51.2 41.2,57.7 43.3,64.3 45.5,70.8 47.7,77.2 49.8,83.1 52.0,88.5 54.2,93.2 56.3,97.1 58.5,99.9 60.7,101.8 62.8,102.5 65.0,102.2 67.2,100.7 69.3,98.1 71.5,94.4 73.7,89.9 75.8,84.5 78.0,78.5 80.2,71.9 82.3,65.0 84.5,57.9 86.7,50.9 88.8,44.1 91.0,37.7 93.2,31.9 95.3,26.9 97.5,22.7 99.7,19.5 101.8,17.4 104.0,16.4 106.2,16.5 108.3,17.8 110.5,20.3 112.7,23.7 114.8,28.2 117.0,33.4 119.2,39.4 121.3,45.8 123.5,52.6 125.7,59.6 127.8,66.5 130.0,73.2 132.2,79.5 134.3,85.2 136.5,90.3 138.7,94.5 140.8,97.7 143.0,100.0 145.2,101.1 147.3,101.2 149.5,100.2 151.7,98.1 153.8,95.0 156.0,91.1 158.2,86.4 160.3,81.0 162.5,75.2 164.7,69.0 166.8,62.7 169.0,56.3 171.2,50.2 173.3,44.4 175.5,39.1 177.7,34.4 179.8,30.5 182.0,27.4 184.2,25.2 186.3,23.9 188.5,23.6 190.7,24.3 192.8,25.9 195.0,28.4 197.2,31.6 199.3,35.6 201.5,40.1 203.7,45.0 205.8,50.3 208.0,55.8 210.2,61.2 212.3,66.6 214.5,71.7 216.7,76.3 218.8,80.5 221.0,84.1 223.2,87.0 225.3,89.2 227.5,90.5 229.7,91.1 231.8,90.8 234.0,89.7 236.2,87.9 238.3,85.4 240.5,82.2 242.7,78.5 244.8,74.4 247.0,70.0 249.2,65.3 251.3,60.6 253.5,55.9 255.7,51.4 257.8,47.2 260.0,43.3 262.2,39.9 264.3,37.1 266.5,34.8 268.7,33.3 270.8,32.4 273.0,32.3 275.2,32.9 277.3,34.1 279.5,36.1 281.7,38.7 283.8,41.8 286.0,45.3 288.2,49.3 290.3,53.5 292.5,57.9 294.7,62.3 296.8,66.7 299.0,70.9 301.2,74.8 303.3,78.4 305.5,81.5 307.7,84.1 309.8,86.0 312.0,87.3 314.2,87.9 316.3,87.7 318.5,86.9 320.7,85.3 322.8,83.0 325.0,80.2 327.2,76.7 329.3,72.8 331.5,68.5 333.7,64.0 335.8,59.2 338.0,54.5 340.2,49.8 342.3,45.3 344.5,41.1 346.7,37.4 348.8,34.2 351.0,31.7 353.2,29.9 355.3,28.8 357.5,28.5 359.7,29.1 361.8,30.5 364.0,32.7 366.2,35.6 368.3,39.3 370.5,43.6 372.7,48.3 374.8,53.5 377.0,58.9 379.2,64.5 381.3,70.0 383.5,75.3 385.7,80.4 387.8,84.9 390.0,88.9 392.2,92.2 394.3,94.6 396.5,96.2 398.7,96.8 400.8,96.5 403.0,95.2 405.2,92.9 407.3,89.8 409.5,85.7 411.7,81.0 413.8,75.6 416.0,69.7 418.2,63.5 420.3,57.1 422.5,50.7 424.7,44.5 426.8,38.6 429.0,33.2 431.2,28.5 433.3,24.5 435.5,21.5 437.7,19.4 439.8,18.4 442.0,18.6 444.2,19.8 446.3,22.1 448.5,25.4 450.7,29.7 452.8,34.8 455.0,40.6 457.2,47.0 459.3,53.7 461.5,60.7 463.7,67.7 465.8,74.5 468.0,80.9 470.2,86.8 472.3,92.1 474.5,96.5 476.7,99.9 478.8,102.3 481.0,103.6 483.2,103.7 485.3,102.6 487.5,100.4 489.7,97.2 491.8,93.0 494.0,87.9 496.2,82.0 498.3,75.6 500.5,68.8 502.7,61.8 504.8,54.8 507.0,47.9 509.2,41.4 511.3,35.4 513.5,30.1 515.7,25.6 517.8,22.0 520.0,19.5 522.2,18.1 524.3,17.7 526.5,18.5 528.7,20.4 530.8,23.3 533.0,27.2 535.2,31.9 537.3,37.2 539.5,43.2 541.7,49.5 543.8,56.0 546.0,62.5 548.2,68.9 550.3,75.0 552.5,80.6 554.7,85.6 556.8,89.9 559.0,93.3 561.2,95.8 563.3,97.4 565.5,97.9 567.7,97.4 569.8,95.9 572.0,93.5 574.2,90.3 576.3,86.4 578.5,81.7 580.7,76.6 582.8,71.2 585.0,65.5 587.2,59.8 589.3,54.2 591.5,48.8 593.7,43.8 595.8,39.3 598.0,35.5 600.2,32.3 602.3,29.9 604.5,28.3 606.7,27.6 608.8,27.8 611.0,28.7 613.2,30.5 615.3,33.0 617.5,36.2 619.7,40.0 621.8,44.2 624.0,48.7 626.2,53.5 628.3,58.4 630.5,63.3 632.7,68.0 634.8,72.4 637.0,76.5 639.2,80.1 641.3,83.1 643.5,85.4 645.7,87.1 647.8,88.1 650.0,88.3 652.2,87.8 654.3,86.6 656.5,84.7 658.7,82.2 660.8,79.1 663.0,75.6 665.2,71.6 667.3,67.4 669.5,63.0 671.7,58.6 673.8,54.2 676.0,49.9 678.2,45.9 680.3,42.3 682.5,39.2 684.7,36.6 686.8,34.6 689.0,33.2 691.2,32.6 693.3,32.6 695.5,33.4 697.7,34.8 699.8,37.0 702.0,39.7 704.2,43.0 706.3,46.7 708.5,50.9 710.7,55.3 712.8,59.9 715.0,64.5 717.2,69.0 719.3,73.4 721.5,77.5 723.7,81.1 725.8,84.3 728.0,86.8 730.2,88.7 732.3,89.9 734.5,90.2 736.7,89.8 738.8,88.6 741.0,86.6 743.2,83.9 745.3,80.5 747.5,76.6 749.7,72.1 751.8,67.2 754.0,62.0 756.2,56.7 758.3,51.5 760.5,46.3 762.7,41.4 764.8,37.0 767.0,33.0 769.2,29.8 771.3,27.2 773.5,25.5 775.7,24.7 777.8,24.9 780.0,25.9 782.2,27.9 784.3,30.8 786.5,34.5 788.7,38.9 790.8,44.0 793.0,49.5 795.2,55.5 797.3,61.6 799.5,67.8 801.7,73.8 803.8,79.6 806.0,85.0 808.2,89.7 810.3,93.7 812.5,96.9 814.7,99.1 816.8,100.3 819.0,100.4 821.2,99.5 823.3,97.5 825.5,94.5 827.7,90.5 829.8,85.7 832.0,80.2 834.2,74.0 836.3,67.5 838.5,60.7 840.7,53.8 842.8,47.0 845.0,40.6 847.2,34.6 849.3,29.2 851.5,24.7 853.7,21.0 855.8,18.4 858.0,16.9 860.2,16.5 862.3,17.3 864.5,19.2 866.7,22.2 868.8,26.2 871.0,31.1 873.2,36.7 875.3,43.0 877.5,49.8 879.7,56.8 881.8,63.9 884.0,70.9 886.2,77.5 888.3,83.7 890.5,89.3 892.7,94.1 894.8,97.9 897.0,100.7 899.2,102.4 901.3,103.0 903.5,102.5 905.7,100.8 907.8,98.1 910.0,94.4 912.2,89.8 914.3,84.4 916.5,78.5 918.7,72.1 920.8,65.4 923.0,58.7 925.2,52.1 927.3,45.7 929.5,39.8 931.7,34.5 933.8,29.9 936.0,26.1 938.2,23.3 940.3,21.5 942.5,20.7 944.7,21.0 946.8,22.3 949.0,24.6 951.2,27.7 953.3,31.7 955.5,36.4 957.7,41.6 959.8,47.2 962.0,53.1 964.2,59.0 966.3,64.9 968.5,70.6 970.7,75.9 972.8,80.7 975.0,84.9 977.2,88.4 979.3,91.0 981.5,92.8 983.7,93.8 985.8,93.8 988.0,92.9 990.2,91.2 992.3,88.7 994.5,85.5 996.7,81.7 998.8,77.4 1001.0,72.7 1003.2,67.7 1005.3,62.6 1007.5,57.6 1009.7,52.6 1011.8,48.0 1014.0,43.7 1016.2,39.9 1018.3,36.7 1020.5,34.1 1022.7,32.2 1024.8,31.1 1027.0,30.8 1029.2,31.2 1031.3,32.4 1033.5,34.2 1035.7,36.7 1037.8,39.8 1040.0,43.4 1042.2,47.3 1044.3,51.6 1046.5,56.1 1048.7,60.6 1050.8,65.1 1053.0,69.4 1055.2,73.4 1057.3,77.1 1059.5,80.3 1061.7,83.0 1063.8,85.1 1066.0,86.5 1068.2,87.3 1070.3,87.3 1072.5,86.6 1074.7,85.2 1076.8,83.2 1079.0,80.6 1081.2,77.4 1083.3,73.8 1085.5,69.8 1087.7,65.5 1089.8,61.0 1092.0,56.5 1094.2,52.0 1096.3,47.8 1098.5,43.8 1100.7,40.2 1102.8,37.0 1105.0,34.5 1107.2,32.5 1109.3,31.3 1111.5,30.8 1113.7,31.1 1115.8,32.2 1118.0,33.9 1120.2,36.4 1122.3,39.6 1124.5,43.3 1126.7,47.6 1128.8,52.2 1131.0,57.1 1133.2,62.1 1135.3,67.2 1137.5,72.2 1139.7,76.9 1141.8,81.3 1144.0,85.1 1146.2,88.4 1148.3,90.9 1150.5,92.7 1152.7,93.7 1154.8,93.7 1157.0,92.9 1159.2,91.2 1161.3,88.6 1163.5,85.2 1165.7,81.1 1167.8,76.4 1170.0,71.1 1172.2,65.5 1174.3,59.6 1176.5,53.7 1178.7,47.8 1180.8,42.2 1183.0,36.9 1185.2,32.2 1187.3,28.2 1189.5,24.9 1191.7,22.6 1193.8,21.2 1196.0,20.8 1198.2,21.5 1200.3,23.2 1202.5,25.9 1204.7,29.5 1206.8,34.0 1209.0,39.3 1211.2,45.1 1213.3,51.4 1215.5,58.1 1217.7,64.8 1219.8,71.4 1222.0,77.9 1224.2,83.9 1226.3,89.3 1228.5,94.0 1230.7,97.8 1232.8,100.6 1235.0,102.4 1237.2,103.0 1239.3,102.5 1241.5,100.9 1243.7,98.2 1245.8,94.4 1248.0,89.8 1250.2,84.3 1252.3,78.2 1254.5,71.5 1256.7,64.6 1258.8,57.5 1261.0,50.5 1263.2,43.7 1265.3,37.3 1267.5,31.6 1269.7,26.6 1271.8,22.5 1274.0,19.4 1276.2,17.4 1278.3,16.5 1280.5,16.8 1282.7,18.2 1284.8,20.7 1287.0,24.3 1289.2,28.7 1291.3,34.0 1293.5,39.9 1295.7,46.4 1297.8,53.1 1300.0,60.0" style="fill:none;stroke:var(--tx)" stroke-width="2.4" stroke-linejoin="round"/><rect x="19.5" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="103.3" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="187.2" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="271.1" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="355.0" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="438.8" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="522.7" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="606.6" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="690.4" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="774.3" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="858.2" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="942.0" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="1025.9" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="1109.8" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="1193.7" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/><rect x="1277.5" y="2" width="3" height="10" rx="1.5" style="fill:var(--ok)"/></svg><div class="wl"><span>−30 dtk</span><span>sekarang</span></div></div>
+    </div>
+    <div class="col">
+      <div class="card glass"><div class="k">Sinyal dan pad</div><div class="sq"><span>Kualitas sinyal</span><b style="color:var(--ok)">Baik · 0,92</b><span>Kehadiran</span><b>Pasien di bed</b>
+<span>Kalibrasi</span><b>08.10 hari ini</b><span>Data terakhir</span><b>1 dtk lalu</b></div></div>
+      <div class="card glass" style="flex:1"><div class="k">Riwayat hari ini</div><div class="tl">
+  <div><span>10.51.40</span><span><b>Kritis</b> · RR ≥ 30 selama 1 mnt · berbunyi 1×</span></div>
+  <div><span>10.44.10</span><span><b>Waspada</b> · RR > 20 selama 2 mnt · berbunyi 1×</span></div>
+  <div><span>10.20.05</span><span><b>Sudah dicek</b> Ns. Rina · "nebulisasi, posisi semi-Fowler" · diterima hub</span></div>
+  <div><span>08.10.12</span><span><b>Kalibrasi</b> selesai · Ns. Rina</span></div>
+</div></div>
+      <div class="card glass"><div class="k">Identitas</div><div class="idg"><span>Pasien</span><b>Ny. D.A. · 60 th</b><span>Diagnosis</span><b>PPOK eksaserbasi</b>
+<span>No. RM</span><b>00-48-21</b><span>ICD-10</span><b>J44.1</b><span>SEP</span><b>1101R0011125V004812</b></div></div>
+      <div class="tech glass2"><span>Data teknis · hub 302-C · kalibrasi · SQI</span><span>Buka ▸</span></div>
+    </div>
+  </div>
+</div>
+</body></html>
