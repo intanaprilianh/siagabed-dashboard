@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><title>Design system · Fondasi</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF3F9;--bgTop:#CFE1F6;--glowA:rgba(150,196,245,.75);--glowB:rgba(175,226,228,.6);--glowC:rgba(255,190,180,.45);
+  --glass:rgba(255,255,255,.58);--glass2:rgba(255,255,255,.82);--solid:#FFFFFF;--edge:rgba(255,255,255,.95);--hair:rgba(16,32,64,.09);
+  --tx:#0D1626;--tx2:#46536A;--tx3:#5F6C80;
+  --hi:#D7262B;--hiText:#C01F24;--hiSoft:rgba(215,38,43,.09);--hiEdge:rgba(215,38,43,.35);--onHi:#FFFFFF;
+  --md:#9A5B00;--mdDot:#E59A11;--mdSoft:rgba(229,154,17,.13);
+  --lo:#1F5E9E;--loSoft:rgba(31,94,158,.10);
+  --ok:#1E8048;--okSoft:rgba(30,128,72,.10);
+  --shadow:0 12px 32px rgba(32,64,112,.10),0 2px 6px rgba(32,64,112,.05);
+  --pillOn:#FFFFFF;--pillOnTx:#0D1626;--ink:#0D1626;--onInk:#FFFFFF;--hatch:rgba(31,94,158,.07);--cbBg:#7A0E13;--sel:#0D1626;--focus:#2F6FED;--solidA:#F3F6FA;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'Inter',sans-serif;color:var(--tx);font-feature-settings:'cv11' 1;
+  background:
+    radial-gradient(900px 520px at 12% -6%,var(--glowA),transparent 70%),
+    radial-gradient(800px 500px at 78% 4%,var(--glowB),transparent 70%),
+    radial-gradient(700px 520px at 22% 62%,var(--glowC),transparent 70%),
+    linear-gradient(180deg,var(--bgTop) 0%,var(--bg) 46%);}
+.glass{background:var(--glass);backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);border:1px solid var(--edge);box-shadow:var(--shadow)}
+.glass2{background:var(--glass2);backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);border:1px solid var(--edge);box-shadow:var(--shadow)}
+.sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;font-size:15px;color:var(--tx2);white-space:nowrap}
+.pill b{color:var(--tx);font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.logo{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:600;letter-spacing:-.01em}
+.logo .mk{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center}
+.nav{display:flex;gap:4px;padding:5px;border-radius:999px}
+.nav a{height:40px;padding:0 20px;border-radius:999px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;color:var(--tx2)}
+.nav a.on{background:var(--pillOn);color:var(--pillOnTx);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.rbtn{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.av{width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--onInk);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;font-weight:600;white-space:nowrap;font-size:16px;height:48px;padding:0 22px}
+.btn.call{background:var(--hi);color:var(--onHi);box-shadow:0 10px 24px rgba(215,38,43,.32)}
+.btn.hold{border:1.5px dashed var(--hiEdge);color:var(--tx)}
+.btn.hold small{font-size:12px;color:var(--tx3);font-weight:500;padding:3px 8px;border-radius:999px;background:var(--hiSoft)}
+.btn.ink{background:var(--ink);color:var(--onInk)}
+.btn.ghost{border:1px solid var(--hair);background:var(--glass2);color:var(--tx)}
+.lv{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.tag{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.tag.hi{background:var(--hiSoft);color:var(--hiText)}
+.tag.md{background:var(--mdSoft);color:var(--md)}
+.tag.lo{background:var(--loSoft);color:var(--lo)}
+.tag.ok{background:var(--okSoft);color:var(--ok)}
+.tag.q{background:var(--hair);color:var(--tx2)}
+.ticks{display:flex;gap:4px}
+.ticks i{display:block;width:12px;height:30px;border-radius:6px;background:var(--hi)}
+.ticks i.off{background:var(--hiSoft);box-shadow:inset 0 0 0 1px var(--hiEdge)}
+.ordb{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:var(--ink);color:var(--onInk)}
+.muted{color:var(--tx3)}
+
+/* tile bed (dipakai bersama) */
+.bed{position:relative;border-radius:20px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.bed .bh{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.bed .bn{font-size:24px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.bed .bs{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;line-height:1.2}
+.bed .bp{font-size:14px;color:var(--tx2);line-height:1.35}
+.bed .bp b{color:var(--tx);font-weight:600}
+.bed .bv{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:4px;white-space:nowrap}
+.bed .num{font-feature-settings:'tnum' 1;font-size:38px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.bed .num small{font-size:14px;font-weight:500;color:var(--tx3);margin-left:3px;letter-spacing:0}
+.bed .bv em{font-style:normal;font-size:12px;color:var(--tx3)}
+.bed .ordb{width:26px;height:26px;font-size:13px}
+.bed.pra{background:var(--hi);border-color:transparent;color:var(--onHi);box-shadow:0 14px 30px rgba(215,38,43,.35)}
+.bed.pra .bp,.bed.pra .bp b,.bed.pra .num small,.bed.pra .bv em,.bed.pra .bs{color:var(--onHi)}
+.bed.pra .ordb{background:#fff;color:#C01F24}
+.bed.kr{box-shadow:inset 0 0 0 2px var(--hiEdge),var(--shadow)}
+.bed.kr .bs{color:var(--hiText)} .bed.kr .ordb{background:var(--hi);color:#fff}
+.bed.ws{box-shadow:inset 0 0 0 2px var(--mdDot),var(--shadow)}
+.bed.ws .bs{color:var(--md)} .bed.ws .ordb{background:var(--mdDot);color:#1B1200}
+.bed.tk{border:1.5px dashed var(--lo);background-image:repeating-linear-gradient(135deg,transparent 0 10px,var(--hatch) 10px 20px)}
+.bed.tk .bs{color:var(--lo)} .bed.tk .ordb{background:var(--lo);color:#fff}
+.bed.ok .bs{color:var(--ok)}
+.bed.empty{background:transparent;border:1.5px dashed var(--hair);box-shadow:none}
+.bed.empty .bn{color:var(--tx3)}
+.bed.away .bs{color:var(--tx2)}
+
+
+.s-ok{}
+.s-pra{background:var(--hi)!important;color:var(--onHi);border-color:transparent!important;box-shadow:0 12px 26px rgba(215,38,43,.34)}
+.s-cb{background:var(--cbBg)!important;color:#fff;border-color:transparent!important;box-shadow:0 12px 26px rgba(122,14,19,.34)}
+.s-kr{background:linear-gradient(var(--hiSoft),var(--hiSoft)),var(--glass2);box-shadow:inset 0 0 0 2px var(--hiEdge),var(--shadow)}
+.s-ws{background:linear-gradient(var(--mdSoft),var(--mdSoft)),var(--glass2);box-shadow:inset 0 0 0 2px var(--mdDot),var(--shadow)}
+.s-tk{border:1.5px dashed var(--lo)!important;background-image:repeating-linear-gradient(135deg,transparent 0 10px,var(--hatch) 10px 20px)}
+.s-away{}
+.s-empty{background:transparent!important;border:1.5px dashed var(--hair)!important;box-shadow:none!important;backdrop-filter:none!important}
+.s-ok .st{color:var(--ok)} .s-kr .st{color:var(--hiText)} .s-ws .st{color:var(--md)} .s-tk .st{color:var(--lo)}
+.s-away .st{color:var(--tx2)} .s-empty .st,.s-empty .id{color:var(--tx3)}
+.s-pra .st,.s-cb .st,.s-pra .sub,.s-cb .sub{color:#fff}
+.ob{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
+.s-pra .ob{background:#fff;color:#C01F24} .s-kr .ob{background:var(--hi);color:#fff}
+.s-ws .ob{background:var(--mdDot);color:#1B1200} .s-tk .ob{background:var(--lo);color:#fff}
+.sel{box-shadow:inset 0 0 0 2px var(--hiEdge),0 0 0 4px var(--bg),0 0 0 7px var(--sel)!important}
+
+/* legenda status */
+.lgd{display:flex;flex-wrap:wrap;gap:8px}
+.lgc{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:10px;font-size:13px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.lgc.s-ok{background:var(--glass2);color:var(--ok);border-color:var(--hair)}
+.lgc.s-kr{color:var(--hiText);box-shadow:inset 0 0 0 1.5px var(--hiEdge)}
+.lgc.s-ws{color:var(--md);box-shadow:inset 0 0 0 1.5px var(--mdDot)}
+.lgc.s-tk{color:var(--lo)}
+.lgc.s-away{background:var(--hair);color:var(--tx2)}
+.lgc.s-empty{color:var(--tx3)}
+.lgc.s-pra,.lgc.s-cb{box-shadow:none}
+.lgc.zero{background:transparent!important;color:var(--tx3)!important;border:1px solid var(--hair)!important;box-shadow:none!important}
+.lgc.zero svg{opacity:.55}
+.lgc .n{font-feature-settings:'tnum' 1;font-weight:700}
+
+.top{position:absolute;left:24px;right:24px;top:20px;height:72px;border-radius:24px;display:flex;align-items:center;gap:24px;padding:0 14px 0 18px}
+.ward{font-size:16px;color:var(--tx2)}.ward b{color:var(--tx);font-weight:600}
+.clock{font-feature-settings:'tnum' 1;font-size:30px;font-weight:600;letter-spacing:-.02em;padding:0 10px}
+.wrap{position:absolute;left:24px;right:24px;top:112px;bottom:24px;display:grid;gap:20px}
+.left{display:flex;flex-direction:column;gap:14px;min-width:0}
+.hd{display:flex;align-items:baseline;gap:14px;padding:6px 8px 2px}
+.hd h1{font-size:30px;font-weight:600;letter-spacing:-.02em}
+.hd span{font-size:15px;color:var(--tx3)}
+.qi{border-radius:28px;padding:22px 26px}
+.qi.pra{background:linear-gradient(150deg,var(--hiSoft),transparent 55%),var(--glass2);box-shadow:inset 0 0 0 2px var(--hiEdge),var(--shadow)}
+.qh{display:flex;align-items:center;gap:10px}
+.qh .s{font-size:14px;color:var(--tx3);margin-left:6px}
+.qi.pra .lv{color:var(--hiText)}
+.qi.pra .id{display:flex;align-items:flex-end;gap:26px;margin:16px 0 0}
+.qi.pra .bedbig{font-size:120px;font-weight:700;letter-spacing:-.05em;line-height:.85}
+.qi.pra .pt{font-size:20px;color:var(--tx2);line-height:1.4;padding-bottom:4px}
+.qi.pra .pt b{color:var(--tx);font-weight:600}
+.qi.pra .why{display:flex;align-items:center;gap:28px;margin:20px 0;padding:16px 20px;border-radius:20px;background:var(--hiSoft)}
+.qi.pra .why .r{font-size:38px;font-weight:600;letter-spacing:-.02em}
+.qi.pra .why .r small{font-size:18px;color:var(--tx2);font-weight:500;letter-spacing:0;margin-left:4px}
+.qi.pra .why .cdt{font-size:15px;color:var(--tx2);line-height:1.3}
+.qi.pra .why .cdt b{display:block;font-size:28px;color:var(--tx);font-weight:600}
+.qi.pra .acts{display:flex;gap:12px}
+.qi.pra .btn.call{height:72px;font-size:21px;padding:0 34px}
+.qi.pra .btn.hold{height:72px;font-size:17px;padding:0 26px}
+.ri{border-radius:24px;padding:16px 22px;display:grid;grid-template-columns:190px 150px 290px 1fr auto;align-items:center;gap:16px}
+.ri .lv{display:flex;align-items:center;gap:8px}
+.ri .bid{font-size:40px;font-weight:600;letter-spacing:-.035em;line-height:1}
+.ri .pt{font-size:15px;color:var(--tx2);line-height:1.35}.ri .pt b{color:var(--tx);font-weight:600}
+.ri .why{font-size:16px;line-height:1.35}.ri .why small{display:block;font-size:14px;color:var(--tx3)}
+.ri .acts{display:flex;gap:8px}
+.ri .btn{height:44px;font-size:15px;padding:0 18px}
+.ri.kr{box-shadow:inset 0 0 0 1.5px var(--hiEdge),var(--shadow)}.ri.kr .lv{color:var(--hiText)}
+.ri.ws .lv{color:var(--md)}.ri.tk .lv{color:var(--lo)}
+.ri.ws .bid,.ri.tk .bid{font-size:32px}
+.foot{margin-top:auto;padding:12px 18px;border-radius:20px;font-size:14px;color:var(--tx3);display:flex;gap:24px}
+.foot b{color:var(--tx2);font-weight:600}
+.panel{border-radius:32px;padding:22px;display:flex;flex-direction:column;min-width:0}
+.rhd{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 14px}
+.rhd h2{font-size:21px;font-weight:600}
+.rhd .cnt{font-size:15px;color:var(--tx2)}.rhd .cnt b{font-size:26px;color:var(--tx);font-weight:600;margin-right:6px}
+.corr{border-radius:18px;border:1px dashed var(--hair);height:52px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:13px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase}
+.hint{font-size:13px;color:var(--tx3)}
+.x{width:36px;height:36px;border-radius:50%;border:1px solid var(--hair);display:inline-flex;align-items:center;justify-content:center;font-size:18px;color:var(--tx2);flex:none}
+
+.s-kr{background:var(--hi)!important;color:#fff;border-color:transparent!important;box-shadow:0 12px 26px rgba(215,38,43,.34)}
+.s-kr .st,.s-kr .sub,.s-kr .id{color:#fff}
+.s-kr .ob{background:#fff;color:#C01F24}
+.cb.s-kr.sel{box-shadow:0 0 0 4px var(--bg),0 0 0 7px var(--sel)!important}
+.s-pra{background:linear-gradient(var(--hiSoft),var(--hiSoft)),var(--glass2)!important;color:var(--tx);box-shadow:inset 0 0 0 3px var(--hi),var(--shadow)}
+.s-pra .st,.s-pra .sub{color:var(--hiText)}
+.s-pra .ob{background:var(--hi);color:#fff}
+.lgc.s-kr{background:var(--hi)!important;color:#fff;box-shadow:none}
+.lgc.s-pra{background:var(--hiSoft)!important;color:var(--hiText);box-shadow:inset 0 0 0 1.5px var(--hi)}
+
+/* 1 · Code Blue: merah tua, bingkai putih, kata kapital */
+.s-cb{background:var(--cbBg)!important;color:#fff;box-shadow:inset 0 0 0 3px #fff,0 0 0 1.5px var(--cbBg),0 12px 26px rgba(122,14,19,.38)!important}
+.s-cb .st{text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+.s-cb .id,.s-cb .sub,.s-cb .cd{color:#fff}
+.s-cb .ob{background:#fff;color:var(--cbBg)}
+.lgc.s-cb:not(.zero){background:var(--cbBg)!important;color:#fff;box-shadow:inset 0 0 0 2px #fff,0 0 0 1px var(--cbBg)}
+/* 2 · Pra-alarm bening + hitung mundur + denyut */
+.s-pra{box-shadow:inset 0 0 0 4px var(--hi),var(--shadow)!important;animation:prp 1.6s ease-in-out infinite}
+@keyframes prp{50%{box-shadow:inset 0 0 0 7px var(--hi),var(--shadow)}}
+@media (prefers-reduced-motion:reduce){.s-pra{animation:none}}
+.cd{font-size:20px;font-weight:800;color:var(--hiText);font-feature-settings:'tnum' 1;line-height:1.05;white-space:nowrap}
+/* 9 · fokus keyboard */
+.focus{box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--focus)!important}
+.s-load{background:var(--hair)!important;border:1px dashed var(--hair)!important;box-shadow:none!important}
+.s-load .st,.s-load .sub{color:var(--tx3)}
+.s-load .id{color:var(--tx2)}
+.lgc.s-load{background:var(--hair);color:var(--tx2)}
+
+/* tile lega (≤ 8 bed) — 6 · kata status 16 px, keterangan 14 px */
+.room{position:relative;border-radius:22px;border:1px solid var(--hair);padding:12px}
+.room .rl{display:flex;justify-content:space-between;align-items:baseline;padding:2px 6px 10px}
+.room .rl b{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3)}
+.room .rl span{font-size:13px;color:var(--tx3)}
+.strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.cb{position:relative;height:150px;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.cb .h{display:flex;align-items:center;justify-content:space-between}
+.cb .id{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.cb .gl{margin-top:auto;height:24px;display:flex;align-items:center}
+.cb .st{font-size:16px;font-weight:700;line-height:1.15}
+.cb .sub{font-size:14px;color:var(--tx3);line-height:1.2;white-space:nowrap}
+
+/* tile rapat (24 bed, 1366) */
+.rows{display:flex;flex-direction:column;gap:8px}
+.rr{display:grid;grid-template-columns:62px repeat(4,minmax(0,1fr));gap:8px}
+.rr .rn{display:flex;flex-direction:column;justify-content:center;padding-left:6px}
+.rr .rn b{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.rr .rn span{font-size:12px;color:var(--tx3)}
+.cbd{position:relative;height:78px;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.cbd .h{display:flex;align-items:center;gap:6px}
+.cbd .id{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1}
+.cbd .ob{margin-left:auto;width:20px;height:20px;font-size:11px}
+.cbd .st{font-size:14px;font-weight:700;line-height:1.1;white-space:nowrap}
+.cbd .sub{font-size:13px;color:var(--tx3);line-height:1.1;white-space:nowrap}
+.cbd .cd{font-size:15px}
+.cbd.s-cb .st{font-size:13px}
+
+/* pita detail (band) — 9 · tombol Tutup */
+.band{position:relative;margin-top:14px;border-radius:18px;padding:18px 20px;display:grid;grid-template-columns:1fr 230px;grid-template-rows:auto auto;gap:14px 20px;
+  background:var(--glass2);border:1px solid var(--edge);box-shadow:inset 0 0 0 1.5px var(--hiEdge),var(--shadow)}
+.band:before{content:"";position:absolute;top:-9px;left:var(--notch);width:16px;height:16px;transform:rotate(45deg);background:var(--glass2);border-left:1.5px solid var(--hiEdge);border-top:1.5px solid var(--hiEdge);border-radius:3px 0 0 0}
+.band .who{font-size:19px;font-weight:600}
+.band .who small{display:block;font-size:14px;font-weight:400;color:var(--tx2);margin-top:4px;line-height:1.35}
+.band .rrv{margin-top:12px;font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1;font-feature-settings:'tnum' 1}
+.band .rrv small{font-size:15px;font-weight:500;color:var(--tx2);letter-spacing:0;margin-left:3px}
+.band .rrc{font-size:14px;color:var(--hiText);font-weight:600;margin-top:6px}
+.band .acts{grid-column:1/3;display:flex;gap:10px;align-items:center}
+.band .acts .btn{height:44px;font-size:15px}
+.band .acts .close{margin-left:auto}
+
+/* 3 · item antrean Kritis merah penuh */
+.ri.kr{background:var(--hi)!important;color:#fff;border-color:transparent!important;box-shadow:0 14px 30px rgba(215,38,43,.30)!important}
+.ri.kr .lv,.ri.kr .bid,.ri.kr .pt,.ri.kr .pt b,.ri.kr .why,.ri.kr .why small,.ri.kr .why b{color:#fff}
+.ri.kr .ordb{background:#fff!important;color:#C01F24!important}
+.btn.onred{background:#fff;color:#B81D22}
+.btn.onred2{border:1.5px solid rgba(255,255,255,.75);color:#fff}
+/* item Pra-alarm ringkas (saat ada Code Blue di atasnya) */
+.ri.prar{background:linear-gradient(var(--hiSoft),var(--hiSoft)),var(--glass2);box-shadow:inset 0 0 0 3px var(--hi),var(--shadow)}
+.ri.prar .lv{color:var(--hiText)}
+.ri.prar .why{display:flex;align-items:center;gap:14px}
+.ri.prar .ticks i{width:7px;height:20px;border-radius:4px}
+.ri.prar .btn.call{height:48px;font-size:15px;padding:0 18px;box-shadow:none}
+.ri.prar .btn.hold{height:48px;font-size:14px;padding:0 14px}
+/* kartu Code Blue besar */
+.qi.cbk{background:var(--cbBg);color:#fff;box-shadow:inset 0 0 0 4px #fff,0 0 0 1.5px var(--cbBg),0 20px 44px rgba(122,14,19,.35)}
+.qi.cbk .lv{color:#fff;font-size:16px;letter-spacing:.1em}
+.qi.cbk .qh .s{color:rgba(255,255,255,.85)}
+.qi.cbk .id{display:flex;align-items:flex-end;gap:26px;margin:14px 0 0}
+.qi.cbk .bedbig{font-size:104px;font-weight:700;letter-spacing:-.05em;line-height:.85}
+.qi.cbk .pt{font-size:19px;line-height:1.4;padding-bottom:4px;color:rgba(255,255,255,.92)}
+.qi.cbk .pt b{color:#fff}
+.qi.cbk .why{display:flex;align-items:center;gap:24px;margin:16px 0;padding:14px 18px;border-radius:18px;background:rgba(255,255,255,.12)}
+.qi.cbk .why .r{font-size:34px;font-weight:600;letter-spacing:-.02em;font-feature-settings:'tnum' 1}
+.qi.cbk .why .r small{font-size:16px;font-weight:500;letter-spacing:0;margin-left:6px;opacity:.9}
+.qi.cbk .why .t{font-size:15px;line-height:1.35;opacity:.95}
+.qi.cbk .acts{display:flex;gap:12px}
+.qi.cbk .btn{height:64px;font-size:19px;padding:0 30px}
+/* 5 · status kiriman */
+.btn.sending{background:var(--hair);color:var(--tx2);gap:10px}
+.ri.kr .btn.sending{background:rgba(255,255,255,.18);color:#fff}
+.sendnote{font-size:13px;color:inherit;opacity:.9}
+.fail{display:flex;align-items:center;gap:16px;margin-top:14px;padding:14px 18px;border-radius:18px;background:var(--mdSoft);box-shadow:inset 0 0 0 1.5px var(--mdDot)}
+.fail .t{font-size:16px;line-height:1.35}.fail .t b{display:block;font-size:17px}
+.fail .btn{height:44px;font-size:15px;margin-left:auto}
+.pillwarn{color:var(--md)!important}.pillwarn b{color:var(--md)!important}
+.mdot{width:8px;height:8px;border-radius:50%;background:var(--mdDot);display:inline-block}
+/* 5 · antrean kosong dan memuat */
+.calm{border-radius:28px;padding:34px 34px 30px;display:flex;flex-direction:column;gap:14px}
+.calm .h{display:flex;align-items:center;gap:16px}
+.calm h2{font-size:36px;font-weight:600;letter-spacing:-.02em}
+.calm p{font-size:18px;color:var(--tx2);line-height:1.45}
+.calm .last{margin-top:10px;border-top:1px solid var(--hair)}
+.calm .last div{display:grid;grid-template-columns:70px 1fr;gap:12px;padding:12px 2px;border-bottom:1px solid var(--hair);font-size:15px;color:var(--tx2)}
+.calm .last div span:first-child{color:var(--tx3);font-feature-settings:'tnum' 1}
+.calm .last div b{color:var(--tx);font-weight:600}
+.calm .k{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-top:6px}
+.skel{height:76px;border-radius:24px;background:var(--hair);opacity:.7}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips span{height:32px;padding:0 12px;border-radius:10px;background:var(--hair);display:inline-flex;align-items:center;font-size:15px;font-weight:600}
+.lgc.zero.s-kr,.lgc.zero.s-pra,.lgc.zero.s-cb{background:transparent!important;color:var(--tx3)!important;box-shadow:inset 0 0 0 1px var(--hair)!important}
+.cb.s-kr .sub,.cbd.s-kr .sub,.cb.s-cb .sub,.cbd.s-cb .sub{color:#fff}
+/* 24 bed: antrean lebih padat */
+.dense .qi.cbk{padding:18px 24px}
+.dense .qi.cbk .bedbig{font-size:84px}
+.dense .qi.cbk .why{margin:12px 0;padding:10px 16px}
+.dense .qi.cbk .why .r{font-size:28px}
+.dense .qi.cbk .btn{height:54px;font-size:17px}
+.dense .ri{padding:12px 20px;grid-template-columns:170px 110px 230px 1fr auto}
+.dense .ri .bid{font-size:34px}.dense .ri.ws .bid,.dense .ri.tk .bid{font-size:30px}
+.ri.prar .why{white-space:nowrap}
+.ri.prar .why small{display:block;font-size:14px;color:var(--hiText);font-weight:700}
+
+body{width:1920px!important;height:auto!important;overflow:visible!important;padding:64px 80px 80px}
+h1{font-size:56px;font-weight:600;letter-spacing:-.03em}
+.lead{font-size:20px;color:var(--tx2);margin-top:10px;max-width:1100px;line-height:1.45}
+section.s{margin-top:56px}
+section.s>h2{font-size:30px;font-weight:600;letter-spacing:-.02em;margin-bottom:6px}
+section.s>p{font-size:16px;color:var(--tx2);margin-bottom:20px;max-width:1200px;line-height:1.45}
+.swg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.sw{border-radius:16px;overflow:hidden;border:1px solid var(--hair);background:var(--solid)}
+.sw .pair{display:grid;grid-template-columns:1fr 1fr;height:70px}
+.sw .pair div{display:flex;align-items:flex-end;padding:6px 8px;font-size:11px;font-weight:600}
+.sw .meta{padding:10px 12px}
+.sw .meta b{display:block;font-size:13px;font-family:ui-monospace,Consolas,monospace}
+.sw .meta span{font-size:12px;color:var(--tx3);line-height:1.3;display:block;margin-top:3px}
+.ty{display:grid;grid-template-columns:260px 1fr 360px;gap:20px;align-items:center;padding:14px 0;border-bottom:1px solid var(--hair)}
+.ty .n{font-size:14px;font-weight:600}.ty .n small{display:block;font-weight:400;color:var(--tx3);font-size:13px;margin-top:2px}
+.ty .d{font-size:13px;color:var(--tx3)}
+.szr{display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap}
+.szr .it{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--tx3)}
+.szr .it b{color:var(--tx);font-family:ui-monospace,Consolas,monospace;font-weight:600}
+.sp-box{background:var(--hi);height:24px}
+.rd-box{width:120px;height:80px;background:var(--glass2);border:1px solid var(--hair)}
+.rules{width:100%;border-collapse:collapse;font-size:15px}
+.rules th{text-align:left;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);padding:10px 12px;border-bottom:1px solid var(--hair)}
+.rules td{padding:12px;border-bottom:1px solid var(--hair);vertical-align:middle;line-height:1.4}
+.rules td:first-child{width:220px}
+.ic{display:flex;gap:26px;flex-wrap:wrap}
+.ic div{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:13px;color:var(--tx2);width:110px;text-align:center}
+.ic .g{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--glass2);border:1px solid var(--hair)}
+.elv{display:flex;gap:28px}
+.elv div{width:260px;height:120px;border-radius:24px;display:flex;align-items:flex-end;padding:16px;font-size:14px;font-weight:600}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.do{border-radius:18px;padding:18px 20px;font-size:15px;line-height:1.5}
+.do h3{font-size:15px;margin-bottom:6px}
+.do ul{padding-left:18px}
+
+</style></head>
+<body>
+
+<h1>SiagaBed · Design system</h1>
+<div class="lead">Dikunci dari layar C″ (Ronde 3). Gaya kaca, Inter, mode terang dan gelap. Diam saat aman, sangat jelas saat ada yang salah. Status tidak pernah dibedakan dengan warna saja: selalu ada kata, ikon, dan bentuk.</div>
+<section class="s"><h2>Aturan status</h2><p>Urutan prioritas sama dengan antrean. Kritis merah penuh dan Pra-alarm merah bening adalah keputusan pengguna (Ronde 2); Code Blue dibedakan lewat merah tua, bingkai putih, dan kata kapital.</p>
+<table class="rules"><tr><th>Status</th><th>Tampilan</th><th>Antrean</th><th>Bunyi</th></tr><tr><td><span class="lgc s-cb" style="height:34px;font-size:15px"><svg width="18" height="18" viewBox="0 0 20 20"><path d="M5 15V10a5 5 0 0 1 10 0v5z" style="fill:#fff"/><rect x="3" y="15.5" width="14" height="2.6" rx="1" style="fill:#fff"/><path d="M10 1v2.6M2.6 4.2l1.8 1.8M17.4 4.2l-1.8 1.8" style="stroke:#fff" stroke-width="1.8" stroke-linecap="round"/></svg>Code Blue</span></td><td>Merah tua penuh + bingkai putih 3 px, kata <b>CODE BLUE</b> kapital, ikon sirene</td><td>Selalu item #1. Aksi: <b>Tim sudah tiba</b></td><td>Bunyi berulang; ponsel tim berbunyi</td></tr><tr><td><span class="lgc s-pra" style="height:34px;font-size:15px"><svg width="18" height="18" viewBox="0 0 22 22"><path d="M7 1h8l6 6v8l-6 6H7l-6-6V7z" style="fill:var(--hi)"/><rect x="9.7" y="5" width="2.6" height="7.5" style="fill:#fff"/><rect x="9.7" y="14.5" width="2.6" height="2.6" style="fill:#fff"/></svg>Pra-alarm</span></td><td>Merah <b>bening</b> + garis merah 4 px yang berdenyut, hitung mundur <b>CB x dtk</b>, ikon oktagon</td><td>Aksi: Panggil Code Blue / Batalkan (tahan 2 dtk)</td><td>Bunyi berulang</td></tr><tr><td><span class="lgc s-kr" style="height:34px;font-size:15px"><svg width="17" height="17" viewBox="0 0 22 20"><path d="M11 1.5l10 17H1z" style="fill:none;stroke:#fff" stroke-width="2.4" stroke-linejoin="round"/><rect x="9.8" y="7" width="2.4" height="6" style="fill:#fff"/><rect x="9.8" y="14.6" width="2.4" height="2.4" style="fill:#fff"/></svg>Kritis</span></td><td>Merah <b>penuh</b>, teks putih, ikon segitiga</td><td>Aksi: Sudah dicek / Lihat tren</td><td>Bunyi 1×, tegas</td></tr><tr><td><span class="lgc s-ws" style="height:34px;font-size:15px"><svg width="16" height="16" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" style="fill:none;stroke:var(--md)" stroke-width="2.2"/><rect x="7.9" y="4.5" width="2.2" height="5.5" style="fill:var(--md)"/><rect x="7.9" y="11.3" width="2.2" height="2.2" style="fill:var(--md)"/></svg>Waspada</span></td><td>Isi kuning lembut + garis kuning 2 px, ikon lingkaran</td><td>Belum dicek di atas yang sudah dicek</td><td>Bunyi 1×, pelan</td></tr><tr><td><span class="lgc s-tk" style="height:34px;font-size:15px"><svg width="16" height="16" viewBox="0 0 18 18"><rect x="1.5" y="1.5" width="15" height="15" rx="3" style="fill:none;stroke:var(--lo)" stroke-width="2" stroke-dasharray="4 3"/><path d="M4.5 13.5l9-9" style="stroke:var(--lo)" stroke-width="2"/></svg>Tidak terpantau</span></td><td>Garis biru putus + arsir, ikon kotak tercoret; selalu sebut penyebab</td><td>Masuk antrean di bawah alarm klinis</td><td>Tanpa bunyi klinis</td></tr><tr><td><span class="lgc s-ok" style="height:34px;font-size:15px"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" style="fill:var(--ok)"/></svg>Normal</span></td><td>Kaca netral, titik hijau, RR</td><td>Tidak masuk antrean</td><td>Diam</td></tr><tr><td><span class="lgc s-away" style="height:34px;font-size:15px"><svg width="14" height="14" viewBox="0 0 16 16"><rect x="3" y="2.5" width="3.4" height="11" rx="1.2" style="fill:var(--tx2)"/><rect x="9.6" y="2.5" width="3.4" height="11" rx="1.2" style="fill:var(--tx2)"/></svg>Turun dari bed</span></td><td>Kaca netral, ikon jeda, lama</td><td>Tidak masuk antrean, tetap terlihat</td><td>Diam</td></tr><tr><td><span class="lgc s-empty" style="height:34px;font-size:15px"><svg width="14" height="14" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3" style="fill:none;stroke:var(--tx3)" stroke-width="1.6" stroke-dasharray="3 2.4"/></svg>Bed kosong</span></td><td>Tanpa isi, garis putus tipis</td><td>Tidak masuk antrean</td><td>Diam</td></tr><tr><td><span class="lgc s-load" style="height:34px;font-size:15px"><svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" style="fill:none;stroke:var(--hair)" stroke-width="2.2"/><path d="M8 2a6 6 0 0 1 6 6" style="fill:none;stroke:var(--tx3)" stroke-width="2.2" stroke-linecap="round"/></svg>Menunggu data</span></td><td>Abu, garis putus, ikon putar; > 10 dtk berubah jadi Tidak terpantau</td><td>Hanya saat memuat</td><td>Diam</td></tr></table></section>
+<section class="s"><h2>Warna</h2><p>Nama semantik, satu nilai per mode. Di kode: <b>designs/system/tokens.css</b> (var(--color-…)). Di Figma: koleksi variabel <b>Warna</b>, mode Terang dan Gelap.</p><div class="swg"><div class="sw"><div class="pair"><div style="background:#EEF3F9;color:#0D1626">Terang</div><div style="background:#070B13;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/canvas/base</b><span>Kanvas halaman (bawah gradasi)</span></div></div><div class="sw"><div class="pair"><div style="background:#CFE1F6;color:#0D1626">Terang</div><div style="background:#0C1628;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/canvas/top</b><span>Kanvas halaman (atas gradasi)</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(150,196,245,.75);color:#0D1626">Terang</div><div style="background:rgba(54,110,190,.42);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/canvas/glow-a</b><span>Cahaya latar biru</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(175,226,228,.6);color:#0D1626">Terang</div><div style="background:rgba(28,150,160,.28);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/canvas/glow-b</b><span>Cahaya latar toska</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(255,190,180,.45);color:#0D1626">Terang</div><div style="background:rgba(255,80,70,.30);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/canvas/glow-c</b><span>Cahaya latar merah lembut</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(255,255,255,.58);color:#0D1626">Terang</div><div style="background:rgba(255,255,255,.055);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/surface/glass</b><span>Panel kaca (bilah atas, panel denah)</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(255,255,255,.82);color:#0D1626">Terang</div><div style="background:rgba(255,255,255,.09);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/surface/glass-strong</b><span>Kaca tebal: tile, item antrean, pil</span></div></div><div class="sw"><div class="pair"><div style="background:#FFFFFF;color:#0D1626">Terang</div><div style="background:#121A27;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/surface/solid</b><span>Permukaan solid (tampilan ringan, popover)</span></div></div><div class="sw"><div class="pair"><div style="background:#F3F6FA;color:#0D1626">Terang</div><div style="background:#0D1420;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/surface/solid-muted</b><span>Panel solid (tampilan ringan)</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(255,255,255,.95);color:#0D1626">Terang</div><div style="background:rgba(255,255,255,.13);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/border/edge</b><span>Tepi kaca</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(16,32,64,.09);color:#0D1626">Terang</div><div style="background:rgba(255,255,255,.08);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/border/hair</b><span>Garis tipis, isi chip netral, skeleton</span></div></div><div class="sw"><div class="pair"><div style="background:#0D1626;color:#0D1626">Terang</div><div style="background:#EEF2F8;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/text/primary</b><span>Teks utama</span></div></div><div class="sw"><div class="pair"><div style="background:#46536A;color:#0D1626">Terang</div><div style="background:#AEB9CB;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/text/secondary</b><span>Teks pendukung</span></div></div><div class="sw"><div class="pair"><div style="background:#5F6C80;color:#0D1626">Terang</div><div style="background:#8795AA;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/text/tertiary</b><span>Keterangan, label kecil</span></div></div><div class="sw"><div class="pair"><div style="background:#D7262B;color:#0D1626">Terang</div><div style="background:#E0383C;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/high</b><span>Prioritas tinggi: Kritis penuh, garis Pra-alarm, tombol Panggil Code Blue</span></div></div><div class="sw"><div class="pair"><div style="background:#C01F24;color:#0D1626">Terang</div><div style="background:#FF7B7E;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/high-text</b><span>Teks merah di atas permukaan terang/gelap</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(215,38,43,.09);color:#0D1626">Terang</div><div style="background:rgba(255,90,95,.14);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/high-soft</b><span>Isi bening Pra-alarm</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(215,38,43,.35);color:#0D1626">Terang</div><div style="background:rgba(255,110,110,.55);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/high-edge</b><span>Garis merah tipis (pita detail Kritis)</span></div></div><div class="sw"><div class="pair"><div style="background:#7A0E13;color:#0D1626">Terang</div><div style="background:#B3161D;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/codeblue</b><span>Code Blue: merah tua + bingkai putih</span></div></div><div class="sw"><div class="pair"><div style="background:#FFFFFF;color:#0D1626">Terang</div><div style="background:#FFFFFF;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/on-alarm</b><span>Teks/ikon/bingkai putih di atas merah</span></div></div><div class="sw"><div class="pair"><div style="background:#9A5B00;color:#0D1626">Terang</div><div style="background:#FFC24A;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/medium-text</b><span>Teks Waspada</span></div></div><div class="sw"><div class="pair"><div style="background:#E59A11;color:#0D1626">Terang</div><div style="background:#FFC24A;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/medium</b><span>Garis dan badge Waspada</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(229,154,17,.13);color:#0D1626">Terang</div><div style="background:rgba(255,194,74,.13);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/alarm/medium-soft</b><span>Isi Waspada</span></div></div><div class="sw"><div class="pair"><div style="background:#1F5E9E;color:#0D1626">Terang</div><div style="background:#79B8FF;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/status/unmonitored</b><span>Tidak terpantau: teks, garis putus</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(31,94,158,.10);color:#0D1626">Terang</div><div style="background:rgba(121,184,255,.13);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/status/unmonitored-soft</b><span>Isi Tidak terpantau</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(31,94,158,.07);color:#0D1626">Terang</div><div style="background:rgba(121,184,255,.07);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/status/unmonitored-hatch</b><span>Arsir Tidak terpantau</span></div></div><div class="sw"><div class="pair"><div style="background:#1E8048;color:#0D1626">Terang</div><div style="background:#62D49C;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/status/normal</b><span>Normal: titik dan teks</span></div></div><div class="sw"><div class="pair"><div style="background:rgba(30,128,72,.10);color:#0D1626">Terang</div><div style="background:rgba(98,212,156,.12);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/status/normal-soft</b><span>Isi ikon centang</span></div></div><div class="sw"><div class="pair"><div style="background:#0D1626;color:#0D1626">Terang</div><div style="background:#EEF2F8;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/action/ink</b><span>Tombol utama netral (Sudah dicek), badge urutan</span></div></div><div class="sw"><div class="pair"><div style="background:#FFFFFF;color:#0D1626">Terang</div><div style="background:#0A101B;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/action/on-ink</b><span>Teks di atas ink</span></div></div><div class="sw"><div class="pair"><div style="background:#FFFFFF;color:#0D1626">Terang</div><div style="background:rgba(255,255,255,.16);color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/action/pill-on</b><span>Nav aktif</span></div></div><div class="sw"><div class="pair"><div style="background:#0D1626;color:#0D1626">Terang</div><div style="background:#FFFFFF;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/action/pill-on-text</b><span>Teks nav aktif</span></div></div><div class="sw"><div class="pair"><div style="background:#2F6FED;color:#0D1626">Terang</div><div style="background:#8AB4FF;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/focus/ring</b><span>Cincin fokus keyboard</span></div></div><div class="sw"><div class="pair"><div style="background:#0D1626;color:#0D1626">Terang</div><div style="background:#EEF2F8;color:#EEF2F8">Gelap</div></div><div class="meta"><b>color/focus/selected</b><span>Cincin bed terpilih</span></div></div></div></section>
+<section class="s"><h2>Tipografi</h2><p>Inter (disimpan lokal untuk on-premise). Angka memakai tabular numbers. Bed dan status di antrean terbaca dari 3 m.</p><div class="ty"><div class="n">Bed/Hero<small>120/85% · Bold · -5%</small></div><div style="font-size:96px;font-weight:700;line-height:85%;letter-spacing:-0.05em;font-feature-settings:'tnum' 1">301-B</div><div class="d">Nomor bed item antrean teratas</div></div><div class="ty"><div class="n">Bed/Baris<small>40/100% · Semi Bold · -3.5%</small></div><div style="font-size:40px;font-weight:600;line-height:100%;letter-spacing:-0.035em;font-feature-settings:'tnum' 1">302-C</div><div class="d">Nomor bed di baris antrean</div></div><div class="ty"><div class="n">Bed/Tile<small>24/100% · Bold · -2%</small></div><div style="font-size:24px;font-weight:700;line-height:100%;letter-spacing:-0.02em;font-feature-settings:'tnum' 1">301-A</div><div class="d">Nomor bed di tile lega</div></div><div class="ty"><div class="n">Bed/Tile rapat<small>17/100% · Bold · -1%</small></div><div style="font-size:17px;font-weight:700;line-height:100%;letter-spacing:-0.01em;font-feature-settings:'tnum' 1">305-B</div><div class="d">Nomor bed di tile rapat</div></div><div class="ty"><div class="n">Angka/Metrik<small>38/100% · Semi Bold · -2%</small></div><div style="font-size:38px;font-weight:600;line-height:100%;letter-spacing:-0.02em;font-feature-settings:'tnum' 1">26 dtk</div><div class="d">Alasan utama (tnum)</div></div><div class="ty"><div class="n">Angka/Jam<small>30/100% · Semi Bold · -2%</small></div><div style="font-size:30px;font-weight:600;line-height:100%;letter-spacing:-0.02em;font-feature-settings:'tnum' 1">10.53</div><div class="d">Jam di bilah atas (tnum)</div></div><div class="ty"><div class="n">Angka/Hitung mundur<small>20/105% · Extra Bold · +0%</small></div><div style="font-size:20px;font-weight:800;line-height:105%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">CB 9 dtk</div><div class="d">Hitung mundur Pra-alarm di tile (tnum)</div></div><div class="ty"><div class="n">Judul/1<small>30/120% · Semi Bold · -2%</small></div><div style="font-size:30px;font-weight:600;line-height:120%;letter-spacing:-0.02em;font-feature-settings:'tnum' 1">Perlu tindakan sekarang</div><div class="d">Judul area</div></div><div class="ty"><div class="n">Judul/2<small>21/120% · Semi Bold · +0%</small></div><div style="font-size:21px;font-weight:600;line-height:120%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">Denah Lantai 3</div><div class="d">Judul panel</div></div><div class="ty"><div class="n">Isi/Besar<small>20/140% · Regular · +0%</small></div><div style="font-size:20px;font-weight:400;line-height:140%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">Ny. R.W. · 54</div><div class="d">Pasien di item teratas</div></div><div class="ty"><div class="n">Isi/Normal<small>16/135% · Regular · +0%</small></div><div style="font-size:16px;font-weight:400;line-height:135%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">Pad terlepas sejak 10.51</div><div class="d">Alasan di baris antrean</div></div><div class="ty"><div class="n">Isi/Kecil<small>14/135% · Regular · +0%</small></div><div style="font-size:14px;font-weight:400;line-height:135%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">Periksa konektor di bedhead</div><div class="d">Keterangan</div></div><div class="ty"><div class="n">Status/Tile<small>16/115% · Bold · +0%</small></div><div style="font-size:16px;font-weight:700;line-height:115%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">Tidak terpantau</div><div class="d">Kata status di tile lega</div></div><div class="ty"><div class="n">Status/Rapat<small>14/110% · Bold · +0%</small></div><div style="font-size:14px;font-weight:700;line-height:110%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">Pra-alarm</div><div class="d">Kata status di tile rapat</div></div><div class="ty"><div class="n">Label/Level<small>14/120% · Bold · +6%</small></div><div style="font-size:14px;font-weight:700;line-height:120%;letter-spacing:0.06em;text-transform:uppercase;font-feature-settings:'tnum' 1">PRA-ALARM</div><div class="d">Tingkat alarm di antrean, kapital</div></div><div class="ty"><div class="n">Label/Overline<small>13/120% · Semi Bold · +10%</small></div><div style="font-size:13px;font-weight:600;line-height:120%;letter-spacing:0.1em;text-transform:uppercase;font-feature-settings:'tnum' 1">KAMAR 301</div><div class="d">Label kamar, kapital</div></div><div class="ty"><div class="n">Tombol/Besar<small>21/100% · Semi Bold · +0%</small></div><div style="font-size:21px;font-weight:600;line-height:100%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">Panggil Code Blue sekarang</div><div class="d">Aksi utama item teratas</div></div><div class="ty"><div class="n">Tombol/Normal<small>15/100% · Semi Bold · +0%</small></div><div style="font-size:15px;font-weight:600;line-height:100%;letter-spacing:0.0em;font-feature-settings:'tnum' 1">Sudah dicek</div><div class="d">Aksi baris</div></div></section>
+<section class="s"><div class="cols2"><div><h2 style="font-size:30px;font-weight:600;margin-bottom:16px">Jarak</h2><div class="szr"><div class="it"><div class="sp-box" style="width:4px"></div><b>space/1</b>4 px</div><div class="it"><div class="sp-box" style="width:8px"></div><b>space/2</b>8 px</div><div class="it"><div class="sp-box" style="width:12px"></div><b>space/3</b>12 px</div><div class="it"><div class="sp-box" style="width:16px"></div><b>space/4</b>16 px</div><div class="it"><div class="sp-box" style="width:20px"></div><b>space/5</b>20 px</div><div class="it"><div class="sp-box" style="width:24px"></div><b>space/6</b>24 px</div><div class="it"><div class="sp-box" style="width:32px"></div><b>space/8</b>32 px</div></div></div>
+<div><h2 style="font-size:30px;font-weight:600;margin-bottom:16px">Radius</h2><div class="szr"><div class="it"><div class="rd-box" style="border-radius:10px"></div><b>radius/chip</b>10 px</div><div class="it"><div class="rd-box" style="border-radius:12px"></div><b>radius/tile-rapat</b>12 px</div><div class="it"><div class="rd-box" style="border-radius:16px"></div><b>radius/tile</b>16 px</div><div class="it"><div class="rd-box" style="border-radius:18px"></div><b>radius/pita</b>18 px</div><div class="it"><div class="rd-box" style="border-radius:22px"></div><b>radius/kamar</b>22 px</div><div class="it"><div class="rd-box" style="border-radius:24px"></div><b>radius/baris</b>24 px</div><div class="it"><div class="rd-box" style="border-radius:28px"></div><b>radius/kartu</b>28 px</div><div class="it"><div class="rd-box" style="border-radius:32px"></div><b>radius/panel</b>32 px</div><div class="it"><div class="rd-box" style="border-radius:40px"></div><b>radius/pil</b>999 px</div></div></div></div></section>
+<section class="s"><h2>Elevasi dan kaca</h2><p>Kaca: blur 28 px + saturasi 170%. Tampilan ringan mematikan blur dan memakai permukaan solid, otomatis di PC lambat.</p>
+<div class="elv"><div class="glass">Panel kaca · surface/glass</div><div class="glass2">Kaca tebal · surface/glass-strong</div><div style="background:var(--hi);color:#fff;box-shadow:0 12px 26px rgba(215,38,43,.34)">Alarm · bayangan merah</div><div style="background:var(--solid);border:1px solid var(--hair)">Solid · tampilan ringan</div></div></section>
+<section class="s"><h2>Ikon status</h2><p>Garis 2–2,4 px, sudut membulat, 14–22 px. Bentuk berbeda per tingkat supaya tetap terbaca tanpa warna.</p><div class="ic"><div><span class="g"><svg width="30" height="30" viewBox="0 0 20 20"><path d="M5 15V10a5 5 0 0 1 10 0v5z" style="fill:var(--cbBg)"/><rect x="3" y="15.5" width="14" height="2.6" rx="1" style="fill:var(--cbBg)"/><path d="M10 1v2.6M2.6 4.2l1.8 1.8M17.4 4.2l-1.8 1.8" style="stroke:var(--cbBg)" stroke-width="1.8" stroke-linecap="round"/></svg></span>Code Blue</div><div><span class="g"><svg width="30" height="30" viewBox="0 0 22 22"><path d="M7 1h8l6 6v8l-6 6H7l-6-6V7z" style="fill:var(--hi)"/><rect x="9.7" y="5" width="2.6" height="7.5" style="fill:#fff"/><rect x="9.7" y="14.5" width="2.6" height="2.6" style="fill:#fff"/></svg></span>Pra-alarm</div><div><span class="g"><svg width="28" height="28" viewBox="0 0 22 20"><path d="M11 1.5l10 17H1z" style="fill:none;stroke:var(--hiText)" stroke-width="2.4" stroke-linejoin="round"/><rect x="9.8" y="7" width="2.4" height="6" style="fill:var(--hiText)"/><rect x="9.8" y="14.6" width="2.4" height="2.4" style="fill:var(--hiText)"/></svg></span>Kritis</div><div><span class="g"><svg width="28" height="28" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" style="fill:none;stroke:var(--md)" stroke-width="2.2"/><rect x="7.9" y="4.5" width="2.2" height="5.5" style="fill:var(--md)"/><rect x="7.9" y="11.3" width="2.2" height="2.2" style="fill:var(--md)"/></svg></span>Waspada</div><div><span class="g"><svg width="28" height="28" viewBox="0 0 18 18"><rect x="1.5" y="1.5" width="15" height="15" rx="3" style="fill:none;stroke:var(--lo)" stroke-width="2" stroke-dasharray="4 3"/><path d="M4.5 13.5l9-9" style="stroke:var(--lo)" stroke-width="2"/></svg></span>Tidak terpantau</div><div><span class="g"><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" style="fill:var(--ok)"/></svg></span>Normal</div><div><span class="g"><svg width="26" height="26" viewBox="0 0 16 16"><rect x="3" y="2.5" width="3.4" height="11" rx="1.2" style="fill:var(--tx2)"/><rect x="9.6" y="2.5" width="3.4" height="11" rx="1.2" style="fill:var(--tx2)"/></svg></span>Turun dari bed</div><div><span class="g"><svg width="26" height="26" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3" style="fill:none;stroke:var(--tx3)" stroke-width="1.6" stroke-dasharray="3 2.4"/></svg></span>Bed kosong</div><div><span class="g"><svg width="26" height="26" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" style="fill:none;stroke:var(--hair)" stroke-width="2.2"/><path d="M8 2a6 6 0 0 1 6 6" style="fill:none;stroke:var(--tx3)" stroke-width="2.2" stroke-linecap="round"/></svg></span>Menunggu data</div></div></section>
+<section class="s"><h2>Aturan pakai</h2><div class="cols2">
+<div class="do" style="background:var(--okSoft)"><h3>Lakukan</h3><ul><li>Bed dulu, baru pasien: "301-B · Ny. R.W."</li><li>Selalu tulis alasan dalam bahasa perawat, dengan satuan dan jam 24 jam.</li><li>Tunjukkan status kiriman: mengirim → diterima hub → gagal.</li><li>Pakai tile lega untuk ≤ 8 bed, tile rapat untuk 24 bed atau layar 1366.</li></ul></div>
+<div class="do" style="background:var(--hiSoft)"><h3>Jangan</h3><ul><li>Membedakan status hanya dengan warna.</li><li>Menaruh gangguan teknis di atas alarm klinis.</li><li>Menggeser item yang sedang disentuh.</li><li>Memakai merah penuh untuk hal selain Kritis, Code Blue, dan tombol Panggil Code Blue.</li></ul></div></div></section>
+
+</body></html>
