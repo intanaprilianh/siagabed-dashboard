@@ -22,12 +22,13 @@
 </script>
 </head>
 <body>
-<div class="app">
+<main class="start" id="start" hidden></main>
+<div class="app" id="app">
   <header class="top glass">
     <div class="logo"><span class="mk glass2"><svg width="24" height="24" viewBox="0 0 30 30" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="27" height="27" rx="8" style="stroke:var(--tx)" stroke-width="2.2"/><rect x="7.5" y="7.5" width="15" height="15" rx="4.5" style="stroke:var(--tx)" stroke-width="2.2"/><rect x="12" y="12" width="6" height="6" rx="2" style="fill:var(--tx)"/></svg></span><span class="t">SiagaBed</span></div>
     <div class="ward"><b>Bangsal Melati</b> · Lantai 3</div>
     <nav class="nav glass2" aria-label="Navigasi utama">
-      <button type="button" data-view="bangsal" aria-current="page">Bangsal</button>
+      <button type="button" data-view="bangsal">Bangsal</button>
       <button type="button" data-view="log" disabled title="Menyusul di tahap berikutnya">Log</button>
       <button type="button" data-view="bantuan" disabled title="Menyusul di tahap berikutnya">Bantuan</button>
       <button type="button" data-view="tim">Tim</button>
@@ -39,6 +40,8 @@
     <span class="pill glass2" id="p-terp"></span>
     <span class="clock" id="clock" aria-label="Jam">--.--</span>
   </header>
+  <div class="gstrip" id="gstrip" role="alert" hidden></div>
+  <section class="detail" id="detail" aria-label="Detail bed" hidden></section>
 
   <main class="wrap" id="wrap">
     <section class="left" aria-labelledby="q-title">
