@@ -14,38 +14,74 @@ Dasbor menjalankan alur **sensor → ambang kondisi kritis → alarm**. Sinyal p
 - Nama perawat, nama pasien, nomor rekam medis, dan nomor SEP fiktif.
 - Belum diuji pada manusia dan bukan alat diagnosis.
 
-## Isi v2 sejauh ini
+## Isi v2
 
-- **Bangsal (S2):**
+Semua layar dari desain Phase 3 (S1–S12):
+
+- **S1 Mulai shift:** pilih shift, perawat, dan peran perangkat (nurse station, ponsel perawat, Tim Code Blue), lalu cek suara. Klik Mulai jaga sekaligus menyalakan suara.
+- **S10 Ringkasan shift:** kejadian shift sebelumnya, hal yang masih terbuka, dan catatan serah terima. Catatan untuk shift berikutnya ditulis dari menu Tim.
+- **S2 Bangsal:**
   - antrean "Perlu tindakan sekarang" dengan urutan Code Blue → Pra-alarm (sisa detik paling sedikit dulu) → Kritis → Waspada (belum dicek di atas yang sudah dicek) → Tidak terpantau → Perlu tindak lanjut
   - denah per kamar dengan hitungan per status, pita detail saat bed diklik, dan penghitung "x/y terpantau"
   - item yang sedang disentuh tidak bergeser; Code Blue dan Pra-alarm baru tetap naik ke atas
-- **Aksi:**
+  - siap 24 bed: tata letak rapat satu baris per kamar
+- **S3 Aksi:**
   - Panggil Code Blue sekarang
   - Batalkan Pra-alarm (tahan 2 dtk)
   - Tim sudah tiba
   - Sudah dicek
   - Di mode live, tiap aksi menampilkan status mengirim → diterima hub → gagal.
-- **Tindak lanjut (S5):** frasa cepat dan catatan. Catatan hanya bisa ditambah; untuk sekarang tersimpan di perangkat ini.
+- **S4 Detail bed:** gaya monitor dengan isi berikut.
+  - gelombang napas live 30 dtk dan tren laju napas
+  - timer henti napas
+  - alasan status
+  - sinyal dan pad
+  - riwayat hari ini dan identitas
+  - strip alarm global untuk bed lain
+- **S5 Tindak lanjut:** frasa cepat dan catatan. Catatan hanya bisa ditambah, tidak bisa diubah.
+- **S6 Mode demo:** panggung alur pad → hub → aturan → keluaran, enam skenario dengan narasi.
+  - Memakai ward simulasi sendiri berbingkai DEMO, jadi tidak pernah tercampur dengan data pasien.
+- **S7 Ponsel perawat:** dok alarm yang menempel di semua tab, plus tab Antrean, Bangsal, dan Lainnya.
+- **S8 Ponsel Tim Code Blue:** layar siaga, panggilan layar penuh, beberapa Code Blue sekaligus, keadaan terputus, dan keadaan ditutup orang lain.
+- **S9 Log kejadian:**
+  - filter per hari atau shift, bed, jenis, perlu tindak lanjut, dan pencarian
+  - ringkasan dan waktu respons Code Blue
+  - ekspor CSV
+- **S11 Aturan alarm:** di menu Bantuan.
+- **S12 Kontrol hub:**
+  - status hub per bed
+  - kalibrasi pad kosong/terisi (5 dtk)
+  - cek hub
+  - mode demo hub
 - **Bunyi per tingkat:**
   - Waspada pelan 1×
   - Kritis tegas 1×
   - Pra-alarm dan Code Blue berulang sampai ditangani
+  - Ponsel Tim Code Blue hanya berbunyi untuk Code Blue.
 - **Tampilan:**
-  - Mode terang dan gelap, Tampilan ringan tanpa blur untuk PC lambat
-  - Ukuran layar 1920×1080 dan 1366×768
-  - Menghormati pengaturan *reduced motion*
-- **Menu Tim (sementara):** skenario simulasi, waktu tahan singkat untuk latihan, tema, dan perawat jaga.
+  - mode terang dan gelap
+  - Tampilan ringan tanpa blur untuk PC lambat
+  - 1920×1080, 1366×768, dan ponsel 390×844
+  - menghormati pengaturan *reduced motion*
 
-Menyusul: Mulai shift (S1), Detail bed (S4), Mode demo (S6), ponsel perawat dan Tim Code Blue (S7, S8), Log (S9), Ringkasan shift (S10), Aturan alarm (S11), dan Kontrol hub (S12).
+### Batasan yang diketahui
+
+- Catatan tindak lanjut, "Sudah dicek", dan catatan serah terima untuk sekarang tersimpan di perangkat (localStorage). Endpoint untuk menyimpannya di `siagabed-backend` belum ada.
+- Di mode simulasi, tiap tab atau perangkat menjalankan simulasinya sendiri. Supaya nurse station dan ponsel melihat kejadian yang sama, pakai mode live.
+- Daftar bed live masih 8 bed tetap. Tata letak 24 bed bisa dicoba di simulasi dengan `?bed=24`.
+- Mode demo baru memakai simulasi, belum hub palsu. Tombol Parameter di Kontrol hub belum aktif.
 
 ## Menjalankan secara lokal
 
 Buka `index.html` langsung di peramban. Tidak perlu server, instalasi, atau internet; font Inter disimpan di `vendor/inter/`.
 
-Opsi URL tampilan:
-- `?tema=gelap` atau `?tema=terang` (bawaan: mengikuti sistem)
-- `?ringan` (tanpa blur)
+Opsi URL:
+- `?langsung`: lewati Mulai shift (untuk kiosk dan uji)
+- `?peran=perawat` atau `?peran=tim`: tampilan ponsel
+- `?demo`: buka Mode demo
+- `?bed=24`: bangsal simulasi 24 bed
+- `?tema=gelap` atau `?tema=terang`: bawaannya mengikuti sistem
+- `?ringan`: tanpa blur
 
 ## Struktur
 

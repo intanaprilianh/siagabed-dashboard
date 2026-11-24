@@ -88,6 +88,22 @@
     { id: '302-C', room: '302', bed: 'C', name: 'Ny. D.A.', age: 60, dxs: 'PPOK eksaserbasi', dx: 'PPOK eksaserbasi akut', no_rm: '00-14-33-28', icd10_code: 'J44.1', sep_number: '1305R0011026V004230', visit_status: 'Rawat inap, hari ke-1', rr: 23, amp: 38, noise: 5 },
     { id: '302-D', room: '302', bed: 'D', name: 'Tn. Y.T.', age: 38, dxs: 'DBD', dx: 'Demam berdarah dengue', no_rm: '00-35-12-89', icd10_code: 'A91', sep_number: '1305R0011026V004236', visit_status: 'Rawat inap, hari ke-2', rr: 18, amp: 52, noise: 4.5 }
   ];
+  /* ?bed=24 (simulasi): bangsal 24 bed untuk menguji tata letak rapat. Pasien tambahan fiktif. */
+  const R24 = !(window.SiagaLive && window.SiagaLive.liveOptions()) && new URLSearchParams(location.search).get('bed') === '24';
+  if (R24) {
+    const NM = ['Tn. H.S.', 'Ny. M.A.', 'Tn. R.K.', 'Ny. S.T.', 'Tn. K.R.', 'Ny. W.P.', 'Tn. D.S.', 'Ny. A.N.', 'Tn. B.H.', 'Ny. L.M.', 'Tn. J.W.', 'Ny. F.R.', 'Tn. G.A.', 'Ny. I.K.', 'Tn. P.L.'];
+    const DX = [['Sepsis, pneumonia', 'A41.9'], ['Pasca-ORIF femur', 'Z47.8'], ['CKD, edema paru', 'N18.5'], ['Hipertensi emergensi', 'I16.1'], ['Asma eksaserbasi', 'J45.9'], ['DM, ketoasidosis', 'E10.1'], ['Pneumonia', 'J18.9'], ['Stroke hemoragik', 'I61.9']];
+    let k = 0;
+    for (const room of ['303', '304', '305', '306']) {
+      for (const bed of ['A', 'B', 'C', 'D']) {
+        const empty = room === '304' && bed === 'D';
+        const d = DX[k % DX.length];
+        ROSTER.push(empty ? { id: `${room}-${bed}`, room, bed, name: null, age: null, dxs: null, dx: null, no_rm: null, icd10_code: null, sep_number: null, visit_status: 'Bed siap pakai', rr: 15, amp: 50, noise: 5, present: false }
+          : { id: `${room}-${bed}`, room, bed, name: NM[k % NM.length], age: 40 + (k * 7) % 45, dxs: d[0], dx: d[0], no_rm: `00-4${k % 10}-${10 + k}-${20 + (k * 3) % 70}`, icd10_code: d[1], sep_number: `1305R00110${26 + k}V0043${10 + k}`, visit_status: `Rawat inap, hari ke-${1 + k % 5}`, rr: 13 + (k % 6), amp: 44 + (k % 5) * 3, noise: 5 });
+        k++;
+      }
+    }
+  }
   const ROOMS = [...new Set(ROSTER.map(r => r.room))];
   const NURSES = ['Ns. Rina', 'Ns. Dewi', 'Ns. Andi', 'Ns. Sari', 'Ns. Budi'];
   const TEAM = ['dr. Yoga', 'Ns. Fajar', 'Ns. Maya', 'Ns. Rudi'];
@@ -218,6 +234,10 @@
   }
   ward.on(ev => {
     const b = ev.bed, t = ev.t;
+    /* nama yang mengirim aksi dari perangkat ini ikut tercatat di kejadiannya */
+    if (b && ['codeblue', 'pra_batal', 'cb_selesai'].includes(ev.type) && !(ev.data && ev.data.by) && S.actor.has(b.id)) {
+      if (ev.type !== 'codeblue' || String((ev.data || {}).source).includes('perawat')) ev = Object.assign({}, ev, { data: Object.assign({}, ev.data, { by: S.actor.get(b.id) }) });
+    }
     addLog(ev);
     if (!b) return;
     switch (ev.type) {
@@ -316,7 +336,7 @@
     const note = Object.assign({ id: 'n' + Date.now() + Math.random().toString(16).slice(2, 6), wall: Date.now(), by: me() }, n);
     S.notes.push(note);
     store.set(NOTES_KEY, S.notes);
-    addLog({ t: n.t, type: 'tindak_lanjut', bed: ward.byId(n.bedId), data: { text: n.text, chips: n.chips, by: me() } });
+    addLog({ t: n.t, type: 'tindak_lanjut', bed: ward.byId(n.bedId), data: { text: n.text, chips: n.chips, by: me(), kind: n.kind } });
     return note;
   }
 
@@ -459,7 +479,7 @@
   }
   const LOGWORD = { pra: 'Pra-alarm', codeblue: 'Code Blue', cb_selesai: 'Code Blue ditutup', pra_batal: 'Pra-alarm dibatalkan', pra_selesai: 'Pra-alarm berhenti sendiri',
     kritis: 'Kritis', waspada: 'Waspada', stabil: 'Kembali normal', teknis: 'Tidak terpantau', teknis_pulih: 'Terpantau lagi', kosong: 'Turun dari bed',
-    kembali: 'Kembali ke bed', tahan_lama: 'Sinyal ditahan lama', tindak_lanjut: 'Tindak lanjut ditulis' };
+    kembali: 'Kembali ke bed', tahan_lama: 'Sinyal ditahan lama', tindak_lanjut: 'Tindak lanjut ditulis', kalibrasi: 'Kalibrasi', perintah_hub: 'Perintah hub' };
   function calmHTML() {
     if (ward.beds.every(b => stat(b) === 'load')) {
       return `<div class="calm glass" style="gap:10px"><div class="h">${ICON.spin('var(--tx3)', 26)}<h2>Menunggu data pertama dari hub</h2></div><p>Bed belum tampil sampai hub mengirim data. Bila lebih dari 10 dtk, periksa sambungan ke server.</p><div class="skel"></div><div class="skel"></div></div>`;
@@ -478,6 +498,8 @@
     ROSTER.filter(x => x.room === r).map(x => tileHTML(x)).join('')
   }</div><div class="band-slot"></div></div>`).join('');
   const tiles = new Map($$('.cb', roomsEl).map(el => [el.dataset.bed, el]));
+  roomsEl.classList.toggle('r24', ROSTER.length > 8);
+  $('#wrap').classList.toggle('dense', ROSTER.length > 8);
 
   /* ctx = sumber "sudah dicek" dan waktu mulai (S untuk ward kerja, keadaan demo untuk ward demo) */
   function tileSub(b, s, t, ctx) {
@@ -520,7 +542,7 @@
       + (cnt.load ? `<span class="lgc s-load">${ICON.spin('var(--tx2)', 12)}<span class="n">${cnt.load}</span>Menunggu data</span>` : '');
   }
   function renderWard(t) {
-    const qIndex = queueIndex(), mini = DENSE.matches;
+    const qIndex = queueIndex(), mini = DENSE.matches || ROSTER.length > 8;
     for (const b of ward.beds) paintTile(tiles.get(b.id), b, t, qIndex, S.selected === b.id, mini);
     for (const r of ROOMS) {
       const n = ward.beds.filter(b => b.room === r && (b.name || b.sim.present)).length;
@@ -568,8 +590,9 @@
     const b = S.selected && ward.byId(S.selected);
     if (!b) { if (bandKey) { $$('.band', roomsEl).forEach(e => e.remove()); bandKey = ''; } return; }
     const s = stat(b), chk = S.checked.has(b.id), i = ROSTER.filter(x => x.room === b.room).findIndex(x => x.id === b.id);
-    const dense = DENSE.matches, cols = dense ? 2 : 4, gap = dense ? 8 : 10, col = i % cols;
-    const notch = `calc((100% - ${gap * (cols - 1)}px) / ${cols} * ${col + 0.5} + ${col * gap}px - 8px)`;
+    const r24 = ROSTER.length > 8, dense = DENSE.matches && !r24, cols = dense ? 2 : 4, gap = dense || r24 ? 8 : 10, col = i % cols;
+    const notch = r24 ? `calc(88px + (100% - 112px) / 4 * ${col + 0.5} + ${col * 8}px - 8px)`
+      : `calc((100% - ${gap * (cols - 1)}px) / ${cols} * ${col + 0.5} + ${col * gap}px - 8px)`;
     const key = `${b.id}:${s}:${chk ? 1 : 0}:${cols}`;
     const slot = $(`.room[data-room="${b.room}"] .band-slot`, roomsEl);
     if (key !== bandKey) {
@@ -628,8 +651,8 @@
   /* Pra-alarm dan Code Blue terlihat di semua layar: strip di bawah bilah atas saat antrean tidak terlihat. */
   function renderGStrip(t) {
     const el = $('#gstrip');
-    const show = S.view === 'detail';
-    const alarms = show ? ward.beds.filter(b => b.id !== S.detailBed && ['cb', 'pra'].includes(stat(b))) : [];
+    const show = ['detail', 'log', 'bantuan', 'hub'].includes(S.view);
+    const alarms = show ? ward.beds.filter(b => (S.view !== 'detail' || b.id !== S.detailBed) && ['cb', 'pra'].includes(stat(b))) : [];
     if (!alarms.length) { if (!el.hidden) { el.hidden = true; el.innerHTML = ''; el.dataset.h = ''; } return; }
     alarms.sort((x, y) => (stat(x) === 'cb' ? 0 : 1) - (stat(y) === 'cb' ? 0 : 1) || (stat(x) === 'cb' ? x.mon.cbT - y.mon.cbT : praLeft(x, t) - praLeft(y, t)));
     const b = alarms[0], s = stat(b), sending = S.sending.get(b.id);
@@ -1012,7 +1035,9 @@
   function renderTim() {
     const pref = store.get('siagabed.tampilan', {});
     const bedOpts = ward.beds.map(b => `<option value="${b.id}"${(S.timBed || S.selected || '301-B') === b.id ? ' selected' : ''}>${b.id} · ${esc(patient(b))}</option>`).join('');
-    timEl.innerHTML = `<div><h2>Menu tim</h2><p>Khusus tim SiagaBed. Mode demo dan Kontrol hub menyusul; untuk sekarang menu ini berisi kontrol simulasi, tampilan, dan serah terima.</p></div>
+    timEl.innerHTML = `<div><h2>Menu tim</h2><p>Khusus tim SiagaBed: kontrol hub, mode demo, simulasi, tampilan, dan serah terima.</p></div>
+      <div><div class="k" style="margin-bottom:8px">Kontrol hub</div><p>Status hub per bed, kalibrasi pad kosong/terisi, dan cek hub. Setiap perintah menampilkan mengirim → diterima → ditolak.</p>
+        <div class="row" style="margin-top:10px"><button type="button" class="btn ink" data-act="hub-open">Buka Kontrol hub</button></div></div>
       ${LIVE ? `<div><div class="k" style="margin-bottom:8px">Mode live</div><p>Data dari hub lewat broker MQTT. Skenario simulasi tidak tersedia. Uji jalur tombol Code Blue manual:</p>
         <div class="row" style="margin-top:10px"><select id="tim-bed" aria-label="Bed">${bedOpts}</select><button type="button" class="btn ghost" data-act="tim-manual">Kirim MANUAL ke hub</button></div></div>`
       : `<div><div class="k" style="margin-bottom:8px">Skenario simulasi</div><div class="row" style="margin-bottom:10px"><select id="tim-bed" aria-label="Bed">${bedOpts}</select></div>
@@ -1037,11 +1062,12 @@
     if (v === 'demo' && !S.demo) startDemo(1);
     if (v !== 'demo' && S.demo) { S.demo = null; demoEl.innerHTML = ''; demoEl.dataset.key = ''; }
     $$('.nav button').forEach(btn => {
-      const on = btn.dataset.view === v || (btn.dataset.view === 'bangsal' && v === 'detail');
+      const on = btn.dataset.view === v || (btn.dataset.view === 'bangsal' && v === 'detail') || (btn.dataset.view === 'tim' && v === 'hub');
       if (on) btn.setAttribute('aria-current', 'page'); else btn.removeAttribute('aria-current');
     });
-    $('#wrap').hidden = v === 'detail';
-    detailEl.hidden = v !== 'detail';
+    const pages = { detail: detailEl, log: logEl, bantuan: rulesEl, hub: hubEl };
+    $('#wrap').hidden = v in pages;
+    for (const [k, el] of Object.entries(pages)) { el.hidden = v !== k; if (v !== k && k !== 'detail') el.dataset.key = ''; }
     timEl.hidden = v !== 'tim';
     if (v === 'tim') { renderTim(); S.sheet = null; renderSheet(); }
     if (v !== 'detail') { detailKey = ''; detailEl.innerHTML = ''; }
@@ -1427,6 +1453,230 @@
       ? `<div class="gstrip${stat(real[0]) === 'cb' ? ' cbs' : ''}" role="alert">${stat(real[0]) === 'cb' ? ICON.siren('#fff', 22) : ICON.oct(22)}<span><b>Alarm nyata · ${real[0].id} · ${esc(patient(real[0]))}</b> ${ST[stat(real[0])].word}</span><span class="sp"></span><button type="button" class="btn ${stat(real[0]) === 'cb' ? 'onred' : 'ink'}" data-act="demo-exit">Akhiri demo, ke antrean</button></div>` : '');
   }
 
+  /* ------------------------------------------------------------------ S9 Log kejadian (hanya bisa ditambah) */
+  const logEl = $('#logpage');
+  S.logF = { range: 'hari', bed: '', kind: '', q: '', fu: false };
+  const lgc = (k, text) => `<span class="lgc s-${k === 'held' ? 'away' : k}">${(TALLY.find(x => x[0] === k) || TALLY[0])[2](false)}${esc(text || ST[k].word)}</span>`;
+  const CMD_LABEL = { PING: 'Cek hub', CAL_EMPTY: 'Kalibrasi kosong', CAL_OCC: 'Kalibrasi terisi', MANUAL: 'Uji tombol manual', 'DEMO 1': 'Mode demo hub nyala', 'DEMO 0': 'Mode demo hub mati' };
+  function nextOf(e, types) { return S.log.find(x => x.bedId === e.bedId && x.t > e.t && types.includes(x.type)); }
+  function noteAfter(e, kinds) { return S.notes.find(n => n.bedId === e.bedId && kinds.includes(n.kind) && n.t >= e.t - 0.5); }
+  function logRow(e) {
+    const d = e.data || {}, src = String(d.source || '');
+    const ref = x => x ? `<span class="tref">lihat ${hms(wallAt(x.t))}</span>` : '';
+    const noteHTML = n => `<div class="tln">${esc(n.text || (n.chips || []).join(', '))}<small>${esc(n.by)} · ${hm(new Date(n.wall))}</small></div>`;
+    const fuCell = kind => { const n = noteAfter(e, [kind]); if (n) return noteHTML(n); const f = S.fu.find(x => x.bedId === e.bedId && Math.abs(x.t - e.t) < 0.6); return f ? `<button type="button" class="tbtn" data-act="write" data-fu="${f.id}">Tulis tindak lanjut</button>` : ''; };
+    switch (e.type) {
+      case 'codeblue': return { kind: 'alarm', chip: lgc('cb'), detail: cap(cbSource(src)), by: src.includes('manual') ? 'tombol kamar' : src.includes('perawat') ? (d.by || 'perawat') : 'hub', fu: ref(nextOf(e, ['cb_selesai'])), fuOpen: false };
+      case 'pra': return { kind: 'alarm', chip: lgc('pra'), detail: `${CFG.apnea} dtk tanpa napas efektif`, sub: `verifikasi ${CFG.verify} dtk`, by: 'hub', fu: ref(nextOf(e, ['pra_batal', 'pra_selesai', 'codeblue'])) };
+      case 'kritis': { const c = S.notes.find(n => n.bedId === e.bedId && n.kind === 'cek' && n.t >= e.t); return { kind: 'alarm', chip: lgc('kr'), detail: `RR ${d.rr ?? '—'} /mnt`, sub: `≥ ${CFG.rrCritHigh} atau ≤ ${CFG.rrCritLow} bertahan`, by: 'hub', fu: c ? `<span class="tref">✓ dicek ${esc(c.by)} ${hm(new Date(c.wall))}</span>` : '' }; }
+      case 'waspada': { const c = S.notes.find(n => n.bedId === e.bedId && n.kind === 'cek' && n.t >= e.t); return { kind: 'alarm', chip: lgc('ws'), detail: `RR ${d.rr ?? '—'} /mnt`, sub: `> ${CFG.rrWarnHigh} atau ≤ ${CFG.rrWarnLow} bertahan`, by: 'hub', fu: c ? `<span class="tref">✓ dicek ${esc(c.by)} ${hm(new Date(c.wall))}</span>` : '' }; }
+      case 'stabil': return { kind: 'alarm', chip: '<span class="ev ok">Normal lagi</span>', detail: `RR ${d.rr ?? '—'} /mnt`, by: 'hub' };
+      case 'pra_batal': return { kind: 'tindakan', chip: '<span class="ev">Dibatalkan</span>', detail: 'Pra-alarm dibatalkan', by: d.by || 'bedhead', fu: fuCell('pra'), fuOpen: !noteAfter(e, ['pra']) && S.fu.some(x => x.bedId === e.bedId && Math.abs(x.t - e.t) < 0.6) };
+      case 'pra_selesai': return { kind: 'tindakan', chip: '<span class="ev ok">Napas kembali</span>', detail: 'Pra-alarm berhenti sendiri', sub: 'napas efektif dengan sinyal andal', by: 'hub' };
+      case 'cb_selesai': { const cb = [...S.log].reverse().find(x => x.bedId === e.bedId && x.type === 'codeblue' && x.t < e.t);
+        return { kind: 'tindakan', chip: '<span class="ev ok">Tim sudah tiba</span>', detail: 'Code Blue ditutup', sub: cb ? `respons ${durS(e.t - cb.t)}` : '', by: d.by || 'ponsel tim', fu: fuCell('cb'), fuOpen: !noteAfter(e, ['cb']) && S.fu.some(x => x.bedId === e.bedId && Math.abs(x.t - e.t) < 0.6) }; }
+      case 'teknis': return { kind: 'teknis', chip: lgc('tk'), detail: 'Pad terlepas atau sinyal hilang', sub: 'periksa konektor di bedhead', by: 'hub' };
+      case 'teknis_pulih': return { kind: 'teknis', chip: '<span class="ev ok">Terpantau lagi</span>', detail: 'Sinyal pad kembali', by: 'hub' };
+      case 'tahan_lama': return { kind: 'teknis', chip: lgc('tk', 'Sinyal tidak andal'), detail: 'Sinyal ditahan terlalu lama', by: 'hub' };
+      case 'kosong': return { kind: 'teknis', chip: lgc('away'), detail: 'Pasien turun · tidak dibunyikan', by: 'hub' };
+      case 'kembali': return { kind: 'teknis', chip: '<span class="ev">Kembali ke bed</span>', detail: 'Pemantauan lanjut', by: 'hub' };
+      case 'kalibrasi': return { kind: 'teknis', chip: '<span class="ev ok">Kalibrasi</span>', detail: 'Kalibrasi pad tersimpan', by: 'hub' };
+      case 'perintah_hub': return { kind: 'teknis', chip: `<span class="ev ${d.ok ? 'ok' : 'no'}">${esc(CMD_LABEL[d.cmd] || d.cmd)}</span>`, detail: d.ok ? 'diterima hub' : `ditolak${d.pesan ? ': ' + esc(d.pesan) : ''}`, by: d.by || '—' };
+      case 'tindak_lanjut':
+        if (d.kind === 'cb' || d.kind === 'pra') return null;          /* tampil di kolom tindak lanjut baris kejadiannya */
+        return { kind: 'tindakan', chip: `<span class="ev ok">${d.kind === 'cek' ? 'Sudah dicek' : 'Catatan'}</span>`, detail: d.kind === 'cek' ? 'Dicek perawat' : esc(String(d.text || '').slice(0, 80)), by: d.by || '—' };
+      default: return null;
+    }
+  }
+  function logData() {
+    const F = S.logF, q = F.q.trim().toLowerCase();
+    const from = F.range === 'shift' ? (S.sessionStart || 0) : new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+    const rows = [];
+    for (let i = S.log.length - 1; i >= 0; i--) {
+      const e = S.log[i];
+      if (!e.bedId || wallAt(e.t).getTime() < from) continue;
+      const r = logRow(e);
+      if (!r) continue;
+      if (F.bed && e.bedId !== F.bed) continue;
+      if (F.kind && r.kind !== F.kind) continue;
+      if (F.fu && !r.fuOpen) continue;
+      if (q && !(`${e.bedId} ${r.by}`.toLowerCase().includes(q))) continue;
+      rows.push(Object.assign(r, { e }));
+      if (rows.length >= 300) break;
+    }
+    return rows;
+  }
+  const logDown = () => LIVE && ward.apiOk === false;
+  function renderLog() {
+    const F = S.logF, openFu = S.fu.length;
+    if (logEl.dataset.key !== 'shell') {
+      logEl.dataset.key = 'shell';
+      logEl.innerHTML = `<div class="phd"><div><h1>Log kejadian</h1><div class="sub">Bangsal Melati · Lantai 3 · hanya bisa ditambah, tidak bisa diubah atau dihapus</div></div><span class="sp"></span><button type="button" class="btn ink" data-act="log-export">Ekspor CSV</button></div>
+        <div data-lbanner></div>
+        <div class="fbar"><button type="button" class="fc" data-act="log-range" data-r="hari">Hari ini <small>${new Date().getDate()} ${BLN[new Date().getMonth()]}</small></button>
+          <button type="button" class="fc" data-act="log-range" data-r="shift">Shift ini</button>
+          <select class="fc" id="log-bed" aria-label="Bed"><option value="">Semua bed</option>${ROSTER.map(r => `<option value="${r.id}">${r.id}</option>`).join('')}</select>
+          <select class="fc" id="log-kind" aria-label="Jenis"><option value="">Semua jenis</option><option value="alarm">Alarm klinis</option><option value="tindakan">Tindakan</option><option value="teknis">Teknis</option></select>
+          <button type="button" class="fc" data-act="log-fu">Perlu tindak lanjut <small data-v="nfu"></small></button><span class="sp"></span>
+          <input class="srch" id="log-q" type="search" placeholder="⌕ Cari bed atau perawat" aria-label="Cari bed atau perawat"></div>
+        <div class="xgrid" style="grid-template-columns:minmax(0,1fr) 440px">
+          <section class="xcard glass xscroll" style="max-height:calc(100vh - 290px)"><table class="xt"><colgroup><col style="width:96px"><col style="width:78px"><col style="width:186px"><col><col style="width:170px"><col style="width:330px"></colgroup>
+            <thead><tr><th>Waktu</th><th>Bed</th><th>Kejadian</th><th>Rincian</th><th>Oleh</th><th>Tindak lanjut</th></tr></thead><tbody data-ltbody></tbody></table></section>
+          <div class="xcol"><section class="xcard glass" data-lcount></section><section class="xcard glass" data-lcb></section>
+            <div class="note2" style="padding:0 6px">${INFO}<span>CSV berisi No. RM dan nama perawat. Simpan sesuai kebijakan rekam medis rumah sakit.</span></div></div></div>`;
+    }
+    $$('[data-act="log-range"]', logEl).forEach(x => x.setAttribute('aria-pressed', String(x.dataset.r === F.range)));
+    $('[data-act="log-fu"]', logEl).setAttribute('aria-pressed', String(F.fu));
+    patchVals(logEl, { nfu: String(openFu) });
+    const down = logDown();
+    $('[data-act="log-export"]', logEl).classList.toggle('dis', down);
+    setHTML($('[data-lbanner]', logEl), down ? `<div class="banner">${ICON.circ(22)}<div><b>Server log tidak tersambung</b>Log hanya berisi kejadian sejak dasbor dibuka ${hm(new Date(bootWall))}. Ekspor CSV dimatikan sementara. Alarm tetap berjalan di hub dan nurse station.</div><button type="button" class="btn ghost" data-act="reload">Coba lagi</button></div>` : '');
+    const rows = logData();
+    setHTML($('[data-ltbody]', logEl), rows.length ? rows.map(r => `<tr><td class="tm">${hms(wallAt(r.e.t))}</td><td class="bd">${r.e.bedId}</td><td>${r.chip}</td><td>${r.detail}${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</td><td>${esc(r.by)}${r.e.hist ? '' : ''}</td><td>${r.fu || ''}</td></tr>`).join('')
+      : '<tr><td colspan="6" class="tm">Belum ada kejadian untuk filter ini.</td></tr>');
+    /* ringkasan samping */
+    const today = new Date(new Date().setHours(0, 0, 0, 0)).getTime(), c = { cb: 0, pra: 0, kr: 0, ws: 0, tk: 0 }, cbs = [];
+    for (const e of S.log) {
+      if (!e.bedId || wallAt(e.t).getTime() < today) continue;
+      if (e.type === 'codeblue') { c.cb++; cbs.push(e); } else if (e.type === 'pra') c.pra++; else if (e.type === 'kritis') c.kr++; else if (e.type === 'waspada') c.ws++; else if (e.type === 'teknis' || e.type === 'tahan_lama') c.tk++;
+    }
+    setHTML($('[data-lcount]', logEl), `<div class="xh"><h2>Hari ini</h2><span>sejak 00.00</span></div>${countsHTML(c)}`);
+    const resp = cbs.map(e => { const x = nextOf(e, ['cb_selesai']); return { e, r: x ? x.t - e.t : null }; });
+    const done = resp.filter(x => x.r != null).map(x => x.r).sort((a, b) => a - b);
+    const med = done.length ? done[Math.floor((done.length - 1) / 2)] : null;
+    setHTML($('[data-lcb]', logEl), `<div class="xh"><h2>Code Blue</h2><span>hari ini</span></div>${resp.length ? resp.slice(-5).reverse().map(x => `<div class="cbl"><span><b>${x.e.bedId}</b> · ${hm(wallAt(x.e.t))}<br>${esc(cbSource((x.e.data || {}).source))}</span><span class="r">respons<br><b>${x.r == null ? 'berjalan' : mmss(x.r)}</b></span></div>`).join('')
+      : '<div class="note2">Belum ada Code Blue hari ini.</div>'}${med != null ? `<div class="note2">Median waktu respons ${durS(med)} (${done.length} kejadian). Waktu respons = Code Blue sampai "Tim sudah tiba".</div>` : ''}`);
+  }
+  function exportCSV() {
+    if (logDown()) { toast('bad', 'Ekspor CSV dimatikan', 'Server log tidak tersambung; log belum lengkap.'); return; }
+    const strip = h => String(h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const q = v => `"${String(v).replace(/"/g, '""')}"`;
+    const rows = logData().reverse();
+    const lines = [['Waktu', 'Bed', 'No. RM', 'Kejadian', 'Rincian', 'Oleh', 'Tindak lanjut'].map(q).join(',')].concat(rows.map(r => {
+      const b = ward.byId(r.e.bedId), w = wallAt(r.e.t);
+      return [`${w.getFullYear()}-${pad2(w.getMonth() + 1)}-${pad2(w.getDate())} ${pad2(w.getHours())}:${pad2(w.getMinutes())}:${pad2(w.getSeconds())}`, r.e.bedId, (b && b.no_rm) || '', strip(r.chip), strip(r.detail) + (r.sub ? ` (${r.sub})` : ''), r.by, strip(r.fu)].map(q).join(',');
+    }));
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = doc.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `siagabed-log-${WARD_KEY}-${today()}.csv`;
+    doc.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('ok', 'CSV diekspor', `${rows.length} baris${LIVE ? '' : ' · data simulasi'}.`);
+  }
+
+  /* ------------------------------------------------------------------ S11 Aturan alarm */
+  const rulesEl = $('#rulespage');
+  function renderRules() {
+    if (rulesEl.dataset.key === 'shell') return;
+    rulesEl.dataset.key = 'shell';
+    const R = [
+      ['cb', `Pra-alarm tidak diverifikasi dalam <b>${CFG.verify} dtk</b>, atau tombol manual di kamar ditekan`, 'Bunyi berulang · ponsel Tim Code Blue berbunyi · lampu dan buzzer nurse station menyala', 'Tim menuju bed dan menekan <b>Tim sudah tiba</b> saat sampai. Waktu respons tercatat.'],
+      ['pra', `<b>≥ ${CFG.apnea} dtk</b> tanpa napas efektif`, `Bunyi berulang · ponsel perawat berbunyi · bedhead meminta verifikasi · hitung mundur ${CFG.verify} dtk`, 'Cek pasien. Bila baik, <b>Batalkan</b> (tahan 2 dtk) di dasbor, ponsel, atau bedhead. Bila tidak, <b>Panggil Code Blue</b>.'],
+      ['kr', `RR <b>≤ ${CFG.rrCritLow}</b> atau <b>≥ ${CFG.rrCritHigh}</b> /mnt selama 1 mnt`, 'Bunyi 1× tegas · item merah penuh di antrean', 'Cek pasien, tekan <b>Sudah dicek</b>, lalu tulis tindak lanjut.'],
+      ['ws', `RR <b>≤ ${CFG.rrWarnLow}</b> atau <b>> ${CFG.rrWarnHigh}</b> /mnt selama 2 mnt`, 'Bunyi 1× pelan', 'Cek saat sempat, lalu <b>Sudah dicek</b>.'],
+      ['tk', 'Pad terlepas, hub offline, data basi <b>> 5 dtk</b>, atau belum dikalibrasi', 'Tanpa bunyi klinis · penyebab ditulis di item', 'Ikuti langkah di item, misalnya periksa konektor atau daya hub.'],
+      ['away', 'Pasien turun dari bed, atau sinyal <b>ditahan</b> karena gerak', 'Diam · tetap terlihat di denah', 'Tidak perlu tindakan kecuali berlangsung lama.']];
+    rulesEl.innerHTML = `<div class="phd"><div><h1>Aturan alarm</h1><div class="sub">Kapan dan kenapa SiagaBed berbunyi · berlaku di semua bed</div></div><span class="sp"></span><button type="button" class="btn ink" data-act="to-bangsal">Tutup</button></div>
+      <div class="xgrid" style="grid-template-columns:minmax(0,1fr) 500px">
+        <section class="xcard glass"><table class="xt rt"><colgroup><col style="width:190px"><col style="width:300px"><col><col style="width:380px"></colgroup>
+          <thead><tr><th>Tingkat</th><th>Kapan</th><th>Yang terjadi</th><th>Yang perlu dilakukan</th></tr></thead><tbody>${R.map(([k, a, b2, d]) => `<tr><td>${k === 'away' ? lgc('away', 'Turun dari bed') : lgc(k)}</td><td>${a}</td><td>${b2}</td><td>${d}</td></tr>`).join('')}</tbody></table></section>
+        <div class="xcol">
+          <section class="xcard glass"><div class="xh"><h2>Hal penting</h2></div><div class="bul">
+            <div><span><b>Hub yang memutuskan</b> alarm; dasbor menjelaskan alasannya.</span></div>
+            <div><span>Gasping yang jarang <b>tidak menghentikan</b> hitung mundur Pra-alarm.</span></div>
+            <div><span>Pra-alarm hanya berhenti oleh perawat, atau oleh napas efektif dengan sinyal andal.</span></div>
+            <div><span>Ponsel hanya berbunyi saat halaman SiagaBed terbuka.</span></div>
+            <div><span>Ambang alarm tidak bisa diubah dari layar perawat.</span></div></div></section>
+          <section class="xcard glass"><div class="xh"><h2>Batasan alat</h2></div><div class="bul">
+            <div><span><b>Bukan alat diagnosis</b> dan belum diuji pada manusia.</span></div>
+            <div><span>Memantau napas pasien dewasa di rawat inap non-ICU, tanpa kontak.</span></div>
+            <div><span>Tidak mengukur SpO₂ maupun detak jantung.</span></div></div></section>
+          <section class="xcard glass"><div class="xh"><span class="dtag">DEMO · data fiktif</span><h2>Mode demo</h2></div>
+            <div style="font-size:15px;line-height:1.45;color:var(--tx2)">Dipakai untuk pelatihan dan Demo Day. Selalu berlabel DEMO dengan bingkai ungu, dan datanya tidak pernah tercampur dengan data pasien.</div></section>
+        </div></div>`;
+  }
+
+  /* ------------------------------------------------------------------ S12 Kontrol hub (khusus tim) */
+  const hubEl = $('#hubpage');
+  const TECHS = ['Teknisi Arif', 'Teknisi Dimas', 'Tim SiagaBed'];
+  Object.assign(S, { hubF: 'perhatian', hubSel: null, hubCmd: new Map(), calib: new Map(), rec: null, tech: store.get('siagabed.teknisi', TECHS[0]) });
+  function hubInfo(b) {
+    const m = b.mon, s = stat(b), off = isLiveBed(m) ? m.isOffline() : false;
+    const c = S.calib.get(b.id) || {}, calOk = LIVE ? !!b.cal || !!(c.empty && c.occ) : !(c.fresh && !(c.empty && c.occ));
+    return { s, off, calOk, attention: off || s === 'tk' || !calOk };
+  }
+  function hubSend(b, cmd) {
+    const label = CMD_LABEL[cmd] || cmd;
+    S.hubCmd.set(b.id, { cmd, label, state: 'sending', wall: Date.now() });
+    if (cmd === 'CAL_EMPTY' || cmd === 'CAL_OCC') S.rec = { bedId: b.id, cmd, t0: Date.now() };
+    const done = (ok, pesan) => {
+      S.hubCmd.set(b.id, { cmd, label, state: ok ? 'ok' : 'fail', wall: Date.now(), pesan });
+      if (ok && cmd.startsWith('CAL')) { const c = S.calib.get(b.id) || {}; c[cmd === 'CAL_EMPTY' ? 'empty' : 'occ'] = Date.now(); S.calib.set(b.id, c); }
+      if (S.rec && S.rec.bedId === b.id) S.rec = null;
+      addLog({ t: ward.t, type: 'perintah_hub', bed: b, data: { cmd, ok, pesan, by: S.tech } });
+      if (!ok) toast('bad', `${b.id} · ${label} ditolak`, pesan || 'Hub tidak membalas.');
+      render();
+    };
+    if (!LIVE) { setTimeout(() => done(true), cmd.startsWith('CAL') ? 5000 : 500); render(); return; }
+    ward.user = S.tech;
+    Promise.resolve(ward.command(b, cmd, true)).then(r => done(!!(r && r.ok), r && r.pesan)).finally(() => { ward.user = me(); });
+    render();
+  }
+  function renderHub(t) {
+    const info = new Map(ward.beds.map(b => [b.id, hubInfo(b)]));
+    const att = ward.beds.filter(b => info.get(b.id).attention), off = ward.beds.filter(b => info.get(b.id).off), nocal = ward.beds.filter(b => !info.get(b.id).calOk);
+    if (!S.hubSel) S.hubSel = (att[0] || ward.beds[0]).id;
+    if (hubEl.dataset.key !== 'shell') {
+      hubEl.dataset.key = 'shell';
+      hubEl.innerHTML = `<div class="phd"><div><h1>Kontrol hub</h1><div class="sub">Khusus tim SiagaBed · Bangsal Melati · ${ward.beds.length} hub · perintah atas nama <select id="hub-tech" aria-label="Nama teknisi">${TECHS.map(n => `<option${n === S.tech ? ' selected' : ''}>${n}</option>`).join('')}</select>${LIVE ? '' : ' · <b>simulasi</b>, perintah tidak dikirim ke hub'}</div></div><span class="sp"></span>
+          <button type="button" class="btn ghost" data-act="hub-ping-all">Cek semua hub</button><button type="button" class="btn ghost" data-act="hub-demo" data-hdemo></button><button type="button" class="btn ghost dis" title="Mengubah parameter hub menyusul">Parameter</button></div>
+        <div class="fbar" data-hfbar></div>
+        <div class="xgrid" style="grid-template-columns:minmax(0,1fr) 560px">
+          <section class="xcard glass xscroll" style="max-height:calc(100vh - 290px)"><table class="xt"><colgroup><col style="width:84px"><col style="width:170px"><col style="width:220px"><col style="width:190px"><col style="width:110px"><col></colgroup>
+            <thead><tr><th>Bed</th><th>Hub</th><th>Pad dan sinyal</th><th>Kalibrasi</th><th>Data</th><th>Perintah terakhir</th></tr></thead><tbody data-htbody></tbody></table></section>
+          <section class="xcard glass" style="gap:14px" data-hpanel></section></div>`;
+    }
+    setHTML($('[data-hdemo]', hubEl), `Mode demo hub · ${ward.demo ? 'nyala' : 'mati'}`);
+    setHTML($('[data-hfbar]', hubEl), [['semua', 'Semua', ward.beds.length], ['perhatian', 'Perlu perhatian', att.length], ['offline', 'Offline', off.length], ['kal', 'Belum dikalibrasi', nocal.length]]
+      .map(([k, l, n]) => `<button type="button" class="fc" data-act="hub-f" data-f="${k}" aria-pressed="${S.hubF === k}">${l} <small>${n}</small></button>`).join(''));
+    const show = S.hubF === 'offline' ? off : S.hubF === 'kal' ? nocal : ward.beds;
+    const cmdCell = b => { const c = S.hubCmd.get(b.id); if (!c) return '—'; return `<span class="ev ${c.state === 'ok' ? 'ok' : c.state === 'fail' ? 'no' : ''}">${c.state === 'sending' ? ICON.spin('currentColor', 12) : ''}${esc(c.label)} · ${c.state === 'ok' ? 'diterima' : c.state === 'fail' ? 'ditolak' : 'mengirim'}</span><small>${hm(new Date(c.wall))}</small>`; };
+    const row = b => {
+      const i = info.get(b.id), m = b.mon, age = dataAge(b);
+      const hub = i.off ? `<span class="onl" style="color:var(--lo)">${ICON.tk(14)}Offline</span><small>hub ${esc(b.key || b.id)}</small>` : `<span class="onl"><span class="dot"></span>Online</span><small>hub ${esc(b.key || b.id)}</small>`;
+      const pad = i.off ? '—' : m.fault ? lgc('tk', 'Pad terlepas') : !m.present ? 'Tidak ada pasien' : `Terpasang · SQI ${typeof m.sqi === 'number' ? dec(m.sqi, 2) : '—'}`;
+      const c = S.calib.get(b.id) || {};
+      const cal = !i.calOk ? lgc('tk', 'Belum dikalibrasi') : c.occ ? `diperbarui ${hm(new Date(c.occ))}` : 'Tersimpan';
+      const data = i.off ? (age != null ? `${durM(age)} lalu` : '—') : `${age ?? 1} dtk`;
+      return `<tr data-hubbed="${b.id}"${S.hubSel === b.id ? ' class="selrow"' : ''}><td class="bd">${b.id}</td><td>${hub}</td><td>${pad}</td><td>${cal}</td><td class="tm">${data}</td><td>${cmdCell(b)}</td></tr>`;
+    };
+    const attShow = show.filter(b => info.get(b.id).attention), okShow = S.hubF === 'perhatian' ? [] : show.filter(b => !info.get(b.id).attention);
+    setHTML($('[data-htbody]', hubEl), (attShow.length ? `<tr class="grp"><td colspan="6">Perlu perhatian · ${attShow.length}</td></tr>${attShow.map(row).join('')}` : '')
+      + (okShow.length ? `<tr class="grp"><td colspan="6">Normal · ${okShow.length}</td></tr>${okShow.map(row).join('')}` : '')
+      + (!attShow.length && !okShow.length ? '<tr><td colspan="6" class="tm">Semua hub online dan terkalibrasi.</td></tr>' : ''));
+    /* panel kalibrasi bed terpilih */
+    const b = ward.byId(S.hubSel), i = info.get(b.id), c = S.calib.get(b.id) || {}, rec = S.rec && S.rec.bedId === b.id ? S.rec : null;
+    const left = rec ? Math.max(0, 5 - (Date.now() - rec.t0) / 1000) : 0;
+    const stored = i.calOk && !c.fresh && !c.empty;     /* kalibrasi lama masih berlaku */
+    const st1 = stored || c.empty ? 'done' : 'cur';
+    const st2 = stored || c.occ ? 'done' : c.empty ? 'cur' : 'next';
+    const step = (st, n, title, sub, prog) => `<div class="kst ${st}"><span class="m">${st === 'done' ? IC_NODE.ok : n}</span><div><b>${title}</b><small>${sub}</small>${prog || ''}</div></div>`;
+    const prog = cmd => rec && rec.cmd === cmd ? `<div class="pbar"><i style="width:${Math.round((1 - left / 5) * 100)}%"></i></div><small>${Math.ceil(left)} dtk lagi</small>` : '';
+    const btn = rec ? `<span class="btn sending bigbtn" role="status">${ICON.spin('var(--tx2)')}Merekam… ${Math.ceil(left)} dtk</span>`
+      : stored ? '<button type="button" class="btn ghost bigbtn" data-act="hub-cal-reset">Kalibrasi ulang</button>'
+      : !c.empty ? '<button type="button" class="btn ink bigbtn" data-act="hub-cal-empty">Rekam pad kosong · 5 dtk</button>'
+      : !c.occ ? '<button type="button" class="btn ink bigbtn" data-act="hub-cal-occ">Rekam pad terisi · 5 dtk</button>'
+      : '<button type="button" class="btn ghost bigbtn" data-act="hub-cal-reset">Kalibrasi ulang</button>';
+    setHTML($('[data-hpanel]', hubEl), `<div class="k">Kalibrasi bed terpilih</div>
+      <div class="hbig" data-bed="${b.id}"><b>${b.id}</b>${!i.calOk ? lgc('tk', 'Belum dikalibrasi') : lgc(i.s === 'load' ? 'load' : i.s)}<span class="sp"></span><button type="button" class="btn ghost" style="height:40px;font-size:14px" data-act="hub-ping">Cek hub</button></div>
+      <div style="font-size:15px;color:var(--tx2)">${b.name ? `${esc(b.name)} · ${b.age} · ${esc(b.dxs)}` : esc(patient(b))}<br>Hub ${esc(b.key || b.id)} · ${i.off ? 'offline' : 'online'}</div>
+      ${step(st1, 1, 'Rekam pad kosong · 5 dtk', c.empty ? `Selesai ${hms(new Date(c.empty))} · diterima hub` : stored ? 'Tersimpan di hub' : 'Pastikan bed kosong, lalu tekan Rekam.', prog('CAL_EMPTY'))}
+      ${step(st2, 2, 'Rekam pad terisi · 5 dtk', c.occ ? `Selesai ${hms(new Date(c.occ))} · diterima hub` : stored ? 'Tersimpan di hub' : 'Minta pasien berbaring tenang di tengah bed, lalu tekan Rekam.', prog('CAL_OCC'))}
+      ${step(stored || (c.empty && c.occ) ? 'done' : 'next', 3, 'Hub mulai memantau', stored ? 'Kalibrasi tersimpan · pemantauan berjalan' : 'Status bed berubah dari Tidak terpantau ke Normal')}
+      <div class="note2">${INFO}<span>Selama belum dikalibrasi, hub menganggap pasien selalu ada. Setiap perintah menampilkan mengirim → diterima → ditolak.</span></div>
+      <div style="margin-top:auto" data-bed="${b.id}">${btn}</div>`);
+  }
+
   /* ------------------------------------------------------------------ toast dan pengumuman */
   function toast(kind, title, text) {
     const el = doc.createElement('div');
@@ -1453,6 +1703,8 @@
       if (a === 'confirm') D.ward.confirm(db); else if (a === 'cancel') D.ward.cancel(db); else if (a === 'close') D.ward.close(db); else if (a === 'check') D.checked.set(db.id, { t: D.ward.t });
       render(); return;
     }
+    const hr = e.target.closest('tr[data-hubbed]');
+    if (hr) { S.hubSel = hr.dataset.hubbed; render(); return; }
     const tile = e.target.closest('#rooms .cb[data-bed]');
     if (tile) { S.selected = S.selected === tile.dataset.bed ? null : tile.dataset.bed; if (S.sheet) { S.sheet = null; renderSheet(); } if (S.view !== 'bangsal') setView('bangsal'); render(); return; }
     const nav = e.target.closest('.nav button[data-view]');
@@ -1511,17 +1763,32 @@
       case 'demo-pause': if (S.demo) S.demo.paused = !S.demo.paused; break;
       case 'demo-restart': if (S.demo) startDemo(S.demo.idx, S.demo.all); break;
       case 'demo-exit': setView(S.role === 'ns' ? 'bangsal' : 'ponsel'); break;
+      case 'log-range': S.logF.range = act.dataset.r; break;
+      case 'log-fu': S.logF.fu = !S.logF.fu; break;
+      case 'log-export': exportCSV(); return;
+      case 'hub-open': setView('hub'); break;
+      case 'hub-f': S.hubF = act.dataset.f; break;
+      case 'hub-ping': if (b) hubSend(b, 'PING'); return;
+      case 'hub-ping-all': for (const x of ward.beds) if (!hubInfo(x).off) hubSend(x, 'PING'); return;
+      case 'hub-demo': ward.setDemo(!ward.demo); toast('ok', `Mode demo hub ${ward.demo ? 'nyala' : 'mati'}`, ward.demo ? `Waktu tahan alarm dipersingkat jadi ${CFG.holdDemo} dtk.` : 'Waktu tahan kembali sesuai aturan.'); break;
+      case 'hub-cal-empty': if (b) hubSend(b, 'CAL_EMPTY'); return;
+      case 'hub-cal-occ': if (b) hubSend(b, 'CAL_OCC'); return;
+      case 'hub-cal-reset': if (b) S.calib.set(b.id, { fresh: true }); break;
       default: return;
     }
     render();
   });
   doc.addEventListener('input', e => {
     if (e.target.id === 'ta-note' && S.sheet) { S.sheet.text = e.target.value; $('[data-v="len"]', sheetEl).textContent = `${e.target.value.length}/1000`; }
+    if (e.target.id === 'log-q') { S.logF.q = e.target.value; render(); }
   });
   doc.addEventListener('change', e => {
     const id = e.target.id;
     if (id === 'tim-demo') { ward.setDemo(e.target.checked); }
     else if (id === 'tim-bed') { S.timBed = e.target.value; }
+    else if (id === 'log-bed') { S.logF.bed = e.target.value; render(); }
+    else if (id === 'log-kind') { S.logF.kind = e.target.value; render(); }
+    else if (id === 'hub-tech') { S.tech = e.target.value; store.set('siagabed.teknisi', S.tech); }
     else if (id === 'tim-tema' || id === 'tim-ringan') {
       const r = doc.documentElement, rg = $('#tim-ringan');
       const pref = { tema: ($('#tim-tema') || {}).value || undefined, ringan: rg ? (rg.checked || undefined) : (r.dataset.render === 'ringan' || undefined) };
@@ -1562,7 +1829,7 @@
     }
     if (e.key === 'Escape') {
       if (S.sheet) closeSheet();
-      else if (S.view === 'detail') { setView('bangsal'); render(); }
+      else if (['detail', 'log', 'bantuan', 'hub'].includes(S.view)) { setView('bangsal'); render(); }
       else if (S.selected) { S.selected = null; render(); }
     }
   });
@@ -1585,6 +1852,9 @@
     renderTop();
     renderGStrip(t);
     if (S.view === 'detail') renderDetail(t);
+    else if (S.view === 'log') renderLog();
+    else if (S.view === 'bantuan') renderRules();
+    else if (S.view === 'hub') renderHub(t);
     else { renderQueue(t); renderWard(t); renderFoot(t); }
     if (S.sheet) { const e = $('[data-v="now"]', sheetEl); if (e) e.textContent = hm(new Date()); }
     for (const [id] of S.failed) { const b = ward.byId(id); if (b && stat(b) !== 'pra' && S.failed.get(id).kind === 'cancel') S.failed.delete(id); }
