@@ -26,10 +26,29 @@ TOKENS = R2.TOKENS
 TOKENS["light"] += "--focus:#2F6FED;--solidA:#F3F6FA;"
 TOKENS["dark"] += "--focus:#8AB4FF;--solidA:#0D1420;"
 
+# Penyesuaian kontras WCAG AA (Phase 3, disetujui pengguna 25 Nov 2026): glow latar diredupkan dan
+# token teks/status digeser sedikit, supaya semua teks >= 4,5:1 di area latar mana pun
+# (cek: python designs/system/kontras.py). Ditulis sebagai penimpa supaya HTML ronde 1c dan 2 tetap
+# seperti saat dipilih. Berlaku untuk ronde 3 ke atas dan design system.
+AA_FIX = {
+    "light": "--glowA:rgba(150,196,245,.50);--glowC:rgba(255,190,180,.32);"
+             "--tx3:#4D5767;--hiText:#BB1E23;--md:#8E5400;--ok:#1C7642;",
+    "dark": "--glowA:rgba(54,110,190,.22);--glowC:rgba(255,80,70,.15);"
+            "--tx3:#A3AEBE;--hiText:#FF9EA0;--lo:#95C7FF;--hi:#D42F33;",
+}
+for _m in AA_FIX:
+    TOKENS[_m] += AA_FIX[_m]
+# Merah di lencana putih (warna tetap di kedua mode) ikut nilai --hiText terang yang baru.
+RED_ON_WHITE_OLD, RED_ON_WHITE = "#C01F24", "#BB1E23"
+
 oct_, tri, circ, off, okdot = R2.oct_, R2.tri, R2.circ, R2.off, R2.okdot
 siren, pause, dash, ticks, spark = R2.siren, R2.pause, R2.dash, R2.ticks, R2.spark
 PHONE, SOUND, COIL = R2.PHONE, R2.SOUND, R2.COIL
-doc = R2.doc
+
+
+def doc(*args, **kwargs):
+    return R2.doc(*args, **kwargs).replace(RED_ON_WHITE_OLD, RED_ON_WHITE)
+
 
 WORD = dict(R2.WORD, load="Menunggu data")
 

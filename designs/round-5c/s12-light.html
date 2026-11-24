@@ -6,12 +6,12 @@
   --bg:#EEF3F9;--bgTop:#CFE1F6;--glowA:rgba(150,196,245,.75);--glowB:rgba(175,226,228,.6);--glowC:rgba(255,190,180,.45);
   --glass:rgba(255,255,255,.58);--glass2:rgba(255,255,255,.82);--solid:#FFFFFF;--edge:rgba(255,255,255,.95);--hair:rgba(16,32,64,.09);
   --tx:#0D1626;--tx2:#46536A;--tx3:#5F6C80;
-  --hi:#D7262B;--hiText:#C01F24;--hiSoft:rgba(215,38,43,.09);--hiEdge:rgba(215,38,43,.35);--onHi:#FFFFFF;
+  --hi:#D7262B;--hiText:#BB1E23;--hiSoft:rgba(215,38,43,.09);--hiEdge:rgba(215,38,43,.35);--onHi:#FFFFFF;
   --md:#9A5B00;--mdDot:#E59A11;--mdSoft:rgba(229,154,17,.13);
   --lo:#1F5E9E;--loSoft:rgba(31,94,158,.10);
   --ok:#1E8048;--okSoft:rgba(30,128,72,.10);
   --shadow:0 12px 32px rgba(32,64,112,.10),0 2px 6px rgba(32,64,112,.05);
-  --pillOn:#FFFFFF;--pillOnTx:#0D1626;--ink:#0D1626;--onInk:#FFFFFF;--hatch:rgba(31,94,158,.07);--cbBg:#7A0E13;--sel:#0D1626;--focus:#2F6FED;--solidA:#F3F6FA;--demo:#6232D5;--demoText:#5426C8;--demoSoft:rgba(98,50,213,.10);--demoEdge:rgba(98,50,213,.45);
+  --pillOn:#FFFFFF;--pillOnTx:#0D1626;--ink:#0D1626;--onInk:#FFFFFF;--hatch:rgba(31,94,158,.07);--cbBg:#7A0E13;--sel:#0D1626;--focus:#2F6FED;--solidA:#F3F6FA;--glowA:rgba(150,196,245,.50);--glowC:rgba(255,190,180,.32);--tx3:#4D5767;--hiText:#BB1E23;--md:#8E5400;--ok:#1C7642;--demo:#6232D5;--demoText:#5426C8;--demoSoft:rgba(98,50,213,.10);--demoEdge:rgba(98,50,213,.45);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -67,7 +67,7 @@ body{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'I
 .bed .ordb{width:26px;height:26px;font-size:13px}
 .bed.pra{background:var(--hi);border-color:transparent;color:var(--onHi);box-shadow:0 14px 30px rgba(215,38,43,.35)}
 .bed.pra .bp,.bed.pra .bp b,.bed.pra .num small,.bed.pra .bv em,.bed.pra .bs{color:var(--onHi)}
-.bed.pra .ordb{background:#fff;color:#C01F24}
+.bed.pra .ordb{background:#fff;color:#BB1E23}
 .bed.kr{box-shadow:inset 0 0 0 2px var(--hiEdge),var(--shadow)}
 .bed.kr .bs{color:var(--hiText)} .bed.kr .ordb{background:var(--hi);color:#fff}
 .bed.ws{box-shadow:inset 0 0 0 2px var(--mdDot),var(--shadow)}
@@ -92,7 +92,7 @@ body{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'I
 .s-away .st{color:var(--tx2)} .s-empty .st,.s-empty .id{color:var(--tx3)}
 .s-pra .st,.s-cb .st,.s-pra .sub,.s-cb .sub{color:#fff}
 .ob{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
-.s-pra .ob{background:#fff;color:#C01F24} .s-kr .ob{background:var(--hi);color:#fff}
+.s-pra .ob{background:#fff;color:#BB1E23} .s-kr .ob{background:var(--hi);color:#fff}
 .s-ws .ob{background:var(--mdDot);color:#1B1200} .s-tk .ob{background:var(--lo);color:#fff}
 .sel{box-shadow:inset 0 0 0 2px var(--hiEdge),0 0 0 4px var(--bg),0 0 0 7px var(--sel)!important}
 
@@ -157,7 +157,7 @@ body{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'I
 
 .s-kr{background:var(--hi)!important;color:#fff;border-color:transparent!important;box-shadow:0 12px 26px rgba(215,38,43,.34)}
 .s-kr .st,.s-kr .sub,.s-kr .id{color:#fff}
-.s-kr .ob{background:#fff;color:#C01F24}
+.s-kr .ob{background:#fff;color:#BB1E23}
 .cb.s-kr.sel{box-shadow:0 0 0 4px var(--bg),0 0 0 7px var(--sel)!important}
 .s-pra{background:linear-gradient(var(--hiSoft),var(--hiSoft)),var(--glass2)!important;color:var(--tx);box-shadow:inset 0 0 0 3px var(--hi),var(--shadow)}
 .s-pra .st,.s-pra .sub{color:var(--hiText)}
@@ -227,7 +227,7 @@ body{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'I
 /* 3 · item antrean Kritis merah penuh */
 .ri.kr{background:var(--hi)!important;color:#fff;border-color:transparent!important;box-shadow:0 14px 30px rgba(215,38,43,.30)!important}
 .ri.kr .lv,.ri.kr .bid,.ri.kr .pt,.ri.kr .pt b,.ri.kr .why,.ri.kr .why small,.ri.kr .why b{color:#fff}
-.ri.kr .ordb{background:#fff!important;color:#C01F24!important}
+.ri.kr .ordb{background:#fff!important;color:#BB1E23!important}
 .btn.onred{background:#fff;color:#B81D22}
 .btn.onred2{border:1.5px solid rgba(255,255,255,.75);color:#fff}
 /* item Pra-alarm ringkas (saat ada Code Blue di atasnya) */

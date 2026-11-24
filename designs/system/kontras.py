@@ -1,7 +1,8 @@
 """Cek kontras WCAG token SiagaBed (terang dan gelap).
 
-Teks dicek di atas kaca (surface-glass) dan tint status, dengan latar kanvas dari lima area:
-polos, atas, puncak glow biru, puncak glow peach/merah, dan tumpang tindih dua glow.
+Teks dicek di atas kaca (surface-glass) dan tint status, dengan latar kanvas dari enam area:
+polos, atas, puncak glow biru, puncak glow toska, puncak glow peach/merah, dan tumpang tindih
+glow biru dengan glow peach/merah.
 Lapisan ber-alpha dikomposit biasa; blur dan saturasi latar diabaikan.
 
     python designs/system/kontras.py
@@ -51,9 +52,9 @@ def ratio(a, b):
 
 def areas(t):
     base, top = rgba(t["canvas-base"])[0], rgba(t["canvas-top"])[0]
-    ga, gc = rgba(t["canvas-glow-a"]), rgba(t["canvas-glow-c"])
-    return {"polos": base, "atas": top, "glow biru": over(ga, top), "glow peach/merah": over(gc, base),
-            "dua glow": over(gc, over(ga, top))}
+    ga, gb, gc = rgba(t["canvas-glow-a"]), rgba(t["canvas-glow-b"]), rgba(t["canvas-glow-c"])
+    return {"polos": base, "atas": top, "glow biru": over(ga, top), "glow toska": over(gb, top),
+            "glow peach/merah": over(gc, base), "dua glow": over(gc, over(ga, top))}
 
 
 PAIRS = [  # (nama, token teks, token tint atau None, di atas kaca?)
