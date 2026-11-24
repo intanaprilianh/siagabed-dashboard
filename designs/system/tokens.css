@@ -34,6 +34,10 @@
   --color-action-pill-on-text: #0D1626;
   --color-focus-ring: #2F6FED;
   --color-focus-selected: #0D1626;
+  --color-demo-base: #6232D5;
+  --color-demo-text: #5426C8;
+  --color-demo-soft: rgba(98,50,213,.10);
+  --color-demo-edge: rgba(98,50,213,.45);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -91,6 +95,10 @@
   --color-action-pill-on-text: #FFFFFF;
   --color-focus-ring: #8AB4FF;
   --color-focus-selected: #EEF2F8;
+  --color-demo-base: #7C4DFF;
+  --color-demo-text: #C4B2FF;
+  --color-demo-soft: rgba(124,77,255,.16);
+  --color-demo-edge: rgba(160,130,255,.55);
   --shadow-raised: 0 16px 40px rgba(0,0,0,.40);
   }
 }
@@ -129,6 +137,10 @@
   --color-action-pill-on-text: #FFFFFF;
   --color-focus-ring: #8AB4FF;
   --color-focus-selected: #EEF2F8;
+  --color-demo-base: #7C4DFF;
+  --color-demo-text: #C4B2FF;
+  --color-demo-soft: rgba(124,77,255,.16);
+  --color-demo-edge: rgba(160,130,255,.55);
   --shadow-raised: 0 16px 40px rgba(0,0,0,.40);
 }
 /* Tampilan ringan untuk PC lambat: tanpa blur, panel solid */

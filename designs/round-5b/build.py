@@ -397,7 +397,7 @@ def s5(mode, failed=False):
     ws304 = R3.row_ws("2", "304-B", "<b>Tn. K.R.</b> · 77 · Pasca-ORIF femur", "RR 9 /mnt ↓<small>≤ 10 selama 2 mnt 30 dtk</small>",
                       '<span class="btn ink">Sudah dicek</span><span class="btn ghost">Lihat tren</span>')
     fu305 = R5.ri("fu selr", "5", "background:var(--ink);color:var(--onInk)", "", "Tindak lanjut", "305-B",
-                  "<b>Tn. H.S.</b> · 70 · Sepsis, pneumonia", "Code Blue selesai 10.56<small>Respons 1 mnt 12 dtk</small>",
+                  "<b>Tn. H.S.</b> · 70 · Sepsis, pneumonia", "Code Blue ditutup 10.53<small>Tim tiba · respons 1 mnt 12 dtk</small>",
                   '<span class="btn ink">Tulis tindak lanjut</span>')
     fu301 = R5.ri("fu", "6", "background:var(--ink);color:var(--onInk)", "", "Tindak lanjut", "301-B",
                   "<b>Ny. R.W.</b> · 54 · Pascalaparotomi H+1", "Pra-alarm dibatalkan di bedhead 10.53<small>Pasien sudah dicek · diterima hub</small>",
@@ -417,7 +417,7 @@ def s5(mode, failed=False):
     sheet = f"""<section class="fsheet glass">
     <div class="fh"><div><div class="k">Tindak lanjut</div><div class="t">305-B · Code Blue</div></div><span class="sp"></span><span class="x" style="width:44px;height:44px">×</span></div>
     <div class="ctx glass2"><span>Kejadian</span><b>Code Blue · tombol manual di kamar</b><span>Pasien</span><b>Tn. H.S. · 70 · Sepsis, pneumonia</b>
-      <span>Waktu</span><b>Mulai 10.51.48 · tim tiba 10.53.00 · selesai 10.56</b><span>Respons</span><b>1 mnt 12 dtk</b>
+      <span>Waktu</span><b>Mulai 10.51.48 · tim tiba 10.53.00</b><span>Respons</span><b>1 mnt 12 dtk</b>
       <span>Ditutup</span><b>Dari ponsel Tim Code Blue · dr. Yoga</b></div>
     <div><div class="k" style="margin-bottom:10px">Frasa cepat</div><div class="chips2">{chips}</div></div>
     <div><div class="k" style="margin-bottom:10px">Catatan</div>{ta}</div>

@@ -26,6 +26,11 @@ def parse(block):
 RAW = {m: parse(R3.TOKENS[m]) for m in ("light", "dark")}
 for m in RAW:
     RAW[m]["onHi"] = "#FFFFFF"
+# Ronde 5: token mode demo (disetujui pengguna 23 Nov 2026), ungu pekat khusus data fiktif
+DEMO = {"light": {"demo": "#6232D5", "demoText": "#5426C8", "demoSoft": "rgba(98,50,213,.10)", "demoEdge": "rgba(98,50,213,.45)"},
+        "dark": {"demo": "#7C4DFF", "demoText": "#C4B2FF", "demoSoft": "rgba(124,77,255,.16)", "demoEdge": "rgba(160,130,255,.55)"}}
+for m in RAW:
+    RAW[m].update(DEMO[m])
 
 # nama lama -> (nama semantik, peran, scope Figma)
 MAP = [
@@ -63,6 +68,10 @@ MAP = [
     ("pillOnTx", "color/action/pill-on-text", "Teks nav aktif", "TEXT_FILL"),
     ("focus", "color/focus/ring", "Cincin fokus keyboard", "STROKE_COLOR,FRAME_FILL"),
     ("sel", "color/focus/selected", "Cincin bed terpilih", "STROKE_COLOR,FRAME_FILL"),
+    ("demo", "color/demo/base", "Mode demo: bingkai layar, tab DEMO, pil sumber, langkah aktif", "FRAME_FILL,SHAPE_FILL,STROKE_COLOR"),
+    ("demoText", "color/demo/text", "Mode demo: teks ungu (label langkah, judul alur)", "TEXT_FILL,SHAPE_FILL"),
+    ("demoSoft", "color/demo/soft", "Mode demo: isi langkah aktif", "FRAME_FILL"),
+    ("demoEdge", "color/demo/edge", "Mode demo: garis panel dan pita", "STROKE_COLOR"),
 ]
 
 SPACE = [("space/1", 4), ("space/2", 8), ("space/3", 12), ("space/4", 16), ("space/5", 20), ("space/6", 24), ("space/8", 32)]
@@ -219,7 +228,7 @@ def fondasi():
 <section class="s"><h2>Ikon status</h2><p>Garis 2–2,4 px, sudut membulat, 14–22 px. Bentuk berbeda per tingkat supaya tetap terbaca tanpa warna.</p><div class="ic">{icons}</div></section>
 <section class="s"><h2>Aturan pakai</h2><div class="cols2">
 <div class="do" style="background:var(--okSoft)"><h3>Lakukan</h3><ul><li>Bed dulu, baru pasien: "301-B · Ny. R.W."</li><li>Selalu tulis alasan dalam bahasa perawat, dengan satuan dan jam 24 jam.</li><li>Tunjukkan status kiriman: mengirim → diterima hub → gagal.</li><li>Pakai tile lega untuk ≤ 8 bed, tile rapat untuk 24 bed atau layar 1366.</li></ul></div>
-<div class="do" style="background:var(--hiSoft)"><h3>Jangan</h3><ul><li>Membedakan status hanya dengan warna.</li><li>Menaruh gangguan teknis di atas alarm klinis.</li><li>Menggeser item yang sedang disentuh.</li><li>Memakai merah penuh untuk hal selain Kritis, Code Blue, dan tombol Panggil Code Blue.</li></ul></div></div></section>
+<div class="do" style="background:var(--hiSoft)"><h3>Jangan</h3><ul><li>Membedakan status hanya dengan warna.</li><li>Menaruh gangguan teknis di atas alarm klinis.</li><li>Menggeser item yang sedang disentuh.</li><li>Memakai merah penuh untuk hal selain Kritis, Code Blue, dan tombol Panggil Code Blue.</li><li>Memakai ungu demo di luar mode demo; ungu hanya berarti data fiktif.</li></ul></div></div></section>
 """
     return R3.doc("Design system · Fondasi", R3.css(SHEET_CSS), body, "light")
 

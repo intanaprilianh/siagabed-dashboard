@@ -325,7 +325,7 @@ def s3():
                 "Napas efektif kembali 10.53.15<small>Pra-alarm berhenti sendiri · tercatat di log</small>", '<span class="btn ghost">Lihat detail</span>')),
             ("Dibatalkan dari bedhead", "Pembatalan bisa dari tombol di bedhead; dasbor menjelaskan siapa dan dari mana.",
              ri("ok2", "", "", R3.okdot() + "&nbsp;", "Dibatalkan", "301-B", PT_RW,
-                "Dibatalkan di bedhead 10.53.12<small>Pasien sudah dicek · diterima hub</small>", '<span class="btn ghost">Tulis tindak lanjut</span>')),
+                "Dibatalkan di bedhead 10.53.18<small>Pasien sudah dicek · diterima hub</small>", '<span class="btn ghost">Tulis tindak lanjut</span>')),
             ("Pembatalan gagal", "Perintah tidak sampai ke hub: arahkan ke bedhead, hitung mundur tetap berjalan.",
              R3.pra_card("4 dtk", 4, failed=True)),
         ]),
@@ -350,7 +350,7 @@ def s3():
         ("Perlu tindak lanjut", [
             ("Setelah Code Blue / kejadian", "Paling bawah di antrean, tanpa bunyi. Hilang setelah tindak lanjut disimpan.",
              ri("fu", "7", "background:var(--ink);color:var(--onInk)", "", "Tindak lanjut", "305-B", "<b>Tn. H.S.</b> · 70 · Sepsis, pneumonia",
-                "Code Blue selesai 10.56<small>Respons 1 mnt 12 dtk · tim: dr. jaga + 2 perawat</small>", '<span class="btn ink">Tulis tindak lanjut</span>')),
+                "Code Blue ditutup 10.53<small>Tim tiba · respons 1 mnt 12 dtk</small>", '<span class="btn ink">Tulis tindak lanjut</span>')),
         ]),
     ]
     html = []
