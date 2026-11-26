@@ -89,9 +89,43 @@ Opsi URL:
 - `css/tokens.css`: token warna dari design system, dibuat oleh `python designs/system/build.py` (jangan diedit manual)
 - `css/app.css`: gaya komponen
 - `js/engine.js`: model sinyal, pengolahan sinyal, dan mesin aturan (simulasi)
+- `js/serial.js`: sensor USB lewat Web Serial untuk firmware `esp32_breath_counter`
 - `live.js`: mode live (MQTT dan backend)
 - `js/app.js`: tampilan v2
 - `designs/`: mockup dan sumber design system dari Phase 3. Untuk cek kontras WCAG token, jalankan `python designs/system/kontras.py`.
+
+## Sensor USB (ESP32 lewat kabel)
+
+Satu bed bisa memakai data asli dari ESP32 yang menjalankan firmware `esp32_breath_counter` (sensor kumparan v3). Bed lain tetap simulasi. Kalau data asli tidak jalan, dasbor tetap bisa didemokan.
+
+1. Colok ESP32 ke komputer lewat USB. Tutup Serial Monitor Arduino dulu, karena port hanya bisa dipakai satu aplikasi.
+2. Buka `index.html` di Chrome atau Edge di komputer.
+3. Buka menu **Tim**, lalu bagian **Sensor USB (ESP32)**. Pilih bed (bawaannya 301-A), klik **Sambungkan sensor USB**, lalu pilih port ESP32. Port biasanya bernama CP210x atau CH340.
+4. Bed itu sekarang memakai data asli. Bilah atas menampilkan **Simulasi · 7 bed | Sensor asli · 301-A**, dan tile 301-A diberi tanda **Sensor asli**, supaya bed lain tetap jelas berlabel simulasi.
+5. Untuk kembali, klik **Putuskan · kembali ke simulasi**. Selama sensor dipakai, simulasi bed itu tetap berjalan di belakang, jadi bisa langsung diambil alih lagi.
+
+Cara data diolah:
+- **Format:** firmware mengirim CSV 10 baris/dtk: `t_s,f_Hz,napas_Hz,rms_Hz,bpm,status`. Saat tersambung, dasbor mengirim `c` supaya firmware ada di mode CSV. Mode Serial Plotter (`p`) juga terbaca.
+- **Laju napas:** diambil dari firmware (median 5 periode).
+- **Deteksi napas:** memakai aturan yang sama dengan firmware, yaitu zero-crossing dengan histeresis 0,3 × RMS dan RMS ≥ 20 Hz. Hasilnya dipakai untuk timer henti napas.
+- **Aturan alarm:** sama dengan hub.
+  - Pra-alarm setelah 20 dtk tanpa napas efektif.
+  - Code Blue otomatis 15 dtk kemudian.
+  - Waspada dan Kritis dengan waktu tahan yang sama, atau 10 dtk bila mode demo hub nyala.
+- **`SINYAL_LEMAH`:** tidak menghentikan hitung mundur, karena dada yang berhenti bergerak juga terbaca sebagai sinyal lemah.
+- **Tidak terpantau:** bed tampil Tidak terpantau beserta penyebabnya bila tidak ada data lebih dari 2 dtk, atau firmware melaporkan `OSC_ERROR`.
+- **Kehadiran pasien:** tanpa kalibrasi, pasien dianggap selalu ada. Kalibrasi dilakukan lewat **Kontrol hub**: rekam pad kosong lalu pad terisi, masing-masing 5 dtk, dari rata-rata frekuensi osilator. Hasilnya tersimpan di perangkat.
+- **Sambung ulang otomatis:** setelah sekali diizinkan, dasbor menyambung lagi sendiri saat halaman dibuka ulang atau ESP32 dicolok ulang.
+
+Batasan:
+- Web Serial hanya ada di Chrome dan Edge di komputer, tidak di ponsel, Firefox, atau Safari.
+- Satu komputer hanya bisa memakai satu sensor USB, untuk satu bed.
+- Untuk bed sensor USB, aturan alarm dihitung di peramban, bukan di hub. Biarkan tab dasbor tetap terlihat, karena peramban memperlambat timer di tab yang tersembunyi. Untuk pemakaian sungguhan, aturan alarm sebaiknya berjalan di ESP32 atau hub, seperti di mode live.
+- Alarm bed ini hanya muncul di tab yang tersambung ke ESP32. Ponsel perawat dan ponsel Tim Code Blue tidak ikut berbunyi, karena tiap tab simulasi berjalan sendiri. Untuk itu pakai hub USB di bawah.
+
+### Sensor asli sampai ke ponsel (hub USB)
+
+`usb_hub.py` di repo `siagabed-backend` membaca ESP32 yang sama lewat USB dan menjalankan aturan alarm hub di laptop, lalu mengirim datanya lewat MQTT seperti hub sungguhan. Dengan mode live, nurse station, ponsel perawat, dan ponsel Tim Code Blue melihat Pra-alarm dan Code Blue dari sensor asli. Perintah dari dasbor (batalkan, panggil Code Blue, tim tiba, kalibrasi) diteruskan ke hub itu dan tercatat di database. Cara termudah: klik dua kali `demo.bat` di repo backend. Peluncur itu menyalakan semua komponen, membuka dasbor, dan menampilkan alamat untuk ponsel (README backend, bagian "Demo sekali klik" dan "Uji dari ponsel lewat hotspot"). Pakai salah satu saja: menu Sensor USB di dasbor atau `usb_hub.py`, karena port serial hanya bisa dibuka satu aplikasi.
 
 ## Mode live (data dari hub)
 
@@ -111,4 +145,5 @@ Di mode live:
 - Status bed, laju napas, dan timer henti napas datang dari hub, tertunda ±1 dtk.
 - Keputusan alarm tetap di hub. Tombol aksi mengirim perintah ke hub dan tercatat di database beserta nama perawat.
 - Hub yang terputus atau datanya basi lebih dari 5 dtk tampil sebagai **Tidak terpantau · hub offline**.
+- Asal data dibaca dari kolom `sensor` di status hub. Bed dari hub palsu (`FAKE`) ditandai simulasi di bilah atas, judul gelombang napas, dan kartu Code Blue. Bed dari hub USB (`COIL_V3`) ditandai **Sensor asli**.
 - Bila backend tidak berjalan, dasbor tetap menampilkan data live dan mengirim perintah langsung lewat MQTT, tetapi log hanya sejak halaman dibuka.

@@ -240,6 +240,12 @@ button:disabled { cursor: default; }
 .cb.sel { outline: 3px solid var(--sel); outline-offset: 4px; }
 .cb.sel:focus-visible { outline-color: var(--focus); }
 .ob { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
+/* Tanda "Sensor asli" pada tile: hanya saat bangsal campuran simulasi dan sensor asli. Mengikuti warna teks tile. */
+.cb .rs { align-self: flex-start; height: 18px; padding: 0 5px; border-radius: 5px; border: 1.5px solid currentColor; display: inline-block;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; line-height: 15px; flex: none; }
+.pdiv { width: 1px; height: 18px; background: var(--hair); flex: none; }
+.pill .pw { display: inline-flex; align-items: center; gap: inherit; }
+@media (max-width: 1599px) { .pill .pw { display: none; } }   /* pill sumber ringkas supaya jam tetap muat di 1366 */
 .cb.s-ok .st { color: var(--ok); }
 .cb.s-away .st { color: var(--tx2); }
 .cb.s-empty { background: transparent !important; border: 1.5px dashed var(--hair) !important; box-shadow: none !important; backdrop-filter: none !important; }
@@ -328,6 +334,8 @@ button:disabled { cursor: default; }
 #rooms.r24 .cb.mini { padding: 8px; column-gap: 4px; }
 #rooms.r24 .cb.mini .id { font-size: 16px; }
 .cb.mini .ob { grid-column: 3; grid-row: 1; width: 20px; height: 20px; font-size: 11px; }
+.cb.mini .rs { grid-column: 2; grid-row: 1; justify-self: end; align-self: center; height: 16px; padding: 0 4px; border-width: 1.2px; line-height: 13.6px; }
+.cb.mini .rsl { display: none; }
 .cb.mini .st { grid-column: 1 / -1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cb.mini .sub { grid-column: 1 / -1; font-size: 13px; }
 .cb.mini .sub.cd { font-size: 15px; }

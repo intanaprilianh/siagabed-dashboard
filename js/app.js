@@ -151,6 +151,145 @@
 
   const ward = LIVE ? new window.SiagaLive.LiveWard(ROSTER, Object.assign({ pre: PRE, user: S.nurse }, LIVE))
                     : new E.Ward(ROSTER, 20261018);
+
+  /* ------------------------------------------------------------------ sensor USB (ESP32 lewat Web Serial)
+   * Satu bed bisa memakai data asli dari firmware esp32_breath_counter; bed lain tetap simulasi (atau live).
+   * Monitor lama bed itu tetap berjalan di belakang, jadi "Kembali ke simulasi" langsung bisa dipakai bila
+   * data asli tidak jalan. Format data dan pembagian kerja firmware/dasbor: lihat js/serial.js. */
+  const SER = window.SiagaSerial || null;
+  const usb = { link: null, bedId: null, shadow: null, state: 'idle', msg: '', busy: false };
+  const usbBed = () => (usb.bedId ? ward.byId(usb.bedId) : null);
+  const usbOn = () => { const b = usbBed(); return !!(b && b.mon.serial); };
+  const usbLive = () => usbOn() && !!usb.link && usb.link.state === 'on' && !usbBed().mon.isOffline();
+  const usbBack = () => (LIVE ? 'data hub' : 'simulasi');
+  /* Asal data per bed, supaya data simulasi selalu berlabel (requirements). Mode live: kolom `sensor` di status hub
+   * ("FAKE" = hub palsu). Tanda "Sensor asli" di tile hanya muncul bila bangsal berisi campuran keduanya. */
+  const SIM_SENSORS = ['FAKE', 'UJI'];              /* hub palsu dan sinyal uji hub USB */
+  const realBed = b => !!(b.mon.serial || (LIVE && b.mon.sensor && !SIM_SENSORS.includes(b.mon.sensor)));
+  const simBed = b => (LIVE ? SIM_SENSORS.includes(b.mon.sensor) : !b.mon.serial);
+  const mixedWard = () => ward.beds.some(realBed) && ward.beds.some(simBed);
+  const srcTag = b => (realBed(b) && mixedWard() ? ' · sensor asli' : simBed(b) && (LIVE || mixedWard()) ? ' · simulasi' : '');
+  const usbCalAll = () => store.get('siagabed.usbcal', {}) || {};
+  function usbSaveCal(id, cal) { const all = usbCalAll(); if (cal) all[id] = cal; else delete all[id]; store.set('siagabed.usbcal', all); }
+  function usbState(state, msg) {
+    const was = usb.state;
+    usb.state = state; usb.msg = msg;
+    if (state === 'error' && was === 'on' && usbOn()) toast('bad', `${usb.bedId} · sensor USB terputus`, `${msg}. Bed ini tampil Tidak terpantau sampai tersambung lagi. Bisa kembali ke ${usbBack()} lewat menu Tim.`);
+    if (S.view === 'tim') renderTim();
+  }
+  async function usbConnect(port, bedId, quiet) {
+    if (!SER || !SER.supported) {
+      if (!quiet) toast('bad', 'Sensor USB tidak didukung peramban ini', 'Pakai Chrome atau Edge di komputer. Web Serial tidak tersedia di ponsel, Firefox, dan Safari.');
+      return false;
+    }
+    if (usb.busy || (usb.link && usb.link.state === 'on')) return !!(usb.link && usb.link.state === 'on');
+    const id = usbOn() ? usb.bedId : bedId || ward.beds[0].id, b = ward.byId(id);
+    if (!b) return false;
+    if (!usbOn() && ['cb', 'pra'].includes(stat(b))) {
+      if (!quiet) toast('warn', `${b.id} sedang alarm`, 'Tangani alarmnya dulu, atau pilih bed lain untuk sensor USB.');
+      return false;
+    }
+    usb.busy = true;
+    const link = new SER.SerialLink(s => { const x = usbBed(); if (link === usb.link && x && x.mon.serial) x.mon.sample(s); }, usbState);
+    usb.link = link;
+    let ok = false;
+    try { ok = await link.connect(port); } finally { usb.busy = false; }
+    if (!ok) {
+      if (usb.link === link) usb.link = null;
+      if (!quiet && link.state === 'error') toast('bad', 'Port USB tidak bisa dibuka', link.msg);
+      if (S.view === 'tim') renderTim();
+      return false;
+    }
+    if (!usbOn()) {                                  /* bed ini pindah ke data asli; monitor lamanya jalan di belakang */
+      usb.shadow = b.mon; usb.bedId = id;
+      b.mon = new SER.SerialBed({ clock: () => ward.t, emit: ev => ward.emit(b, ev), demo: ward.demo, cal: usbCalAll()[id] || null, shadow: usb.shadow });
+    }
+    const info = link.port && link.port.getInfo ? link.port.getInfo() : {};
+    store.set('siagabed.usb', { bed: usb.bedId, vid: info.usbVendorId ?? null, pid: info.usbProductId ?? null });
+    toast('ok', `${usb.bedId} · sensor USB tersambung`, `Bed ini memakai data asli dari ESP32. Bed lain tetap ${LIVE ? 'dari hub' : 'simulasi'}.`);
+    setTimeout(() => {
+      if (usb.link !== link || link.state !== 'on' || link.lines) return;
+      toast('warn', `${usb.bedId} · belum ada data dari ESP32`, link.bad ? 'Port mengirim teks, tetapi bukan CSV firmware esp32_breath_counter. Periksa firmware dan baud 115200.' : `Periksa firmware dan baud 115200, atau tekan tombol EN di ESP32. Bisa kembali ke ${usbBack()} lewat menu Tim.`);
+    }, 6000);
+    if (S.view === 'tim') renderTim();
+    render();
+    return true;
+  }
+  async function usbDisconnect() {
+    const b = usbBed();
+    if (b && b.mon.serial && ['cb', 'pra'].includes(stat(b))) {
+      toast('warn', `${b.id} sedang alarm`, `Tangani Pra-alarm atau Code Blue dulu, lalu kembali ke ${usbBack()}.`);
+      return false;
+    }
+    const link = usb.link;
+    usb.link = null;
+    if (link) await link.disconnect();
+    if (b && b.mon.serial && usb.shadow) {
+      const sh = usb.shadow;
+      if (sh.alarm && sh.alarm !== 'none') { sh.alarm = 'none'; sh.lastEffT = ward.t; }   /* alarm simulasi selama sensor USB dipakai tidak dimunculkan */
+      if (sh.events) sh.events.length = 0;
+      b.mon = sh;
+    }
+    usb.bedId = null; usb.shadow = null; usb.state = 'idle'; usb.msg = '';
+    store.set('siagabed.usb', null);
+    if (b) toast('ok', `${b.id} kembali ke ${usbBack()}`, 'Sensor USB diputus.');
+    if (S.view === 'tim') renderTim();
+    render();
+    return true;
+  }
+  function usbHubCmd(b, cmd, done) {                /* perintah Kontrol hub untuk bed sensor USB, dikerjakan di dasbor */
+    const m = b.mon;
+    if (cmd === 'CAL_EMPTY' || cmd === 'CAL_OCC') {
+      if (m.isOffline()) { setTimeout(() => done(false, 'ESP32 tidak mengirim data'), 300); return; }
+      m.startCal(cmd === 'CAL_EMPTY' ? 'empty' : 'occ');
+      setTimeout(() => {
+        const f = m.finishCal();
+        if (f == null) { done(false, 'Tidak ada data osilator selama perekaman'); return; }
+        usbSaveCal(b.id, m.cal);
+        done(true, `rata-rata ${Math.round(f).toLocaleString('id-ID')} Hz`);
+        const diff = m.calibrated() ? Math.abs(m.cal.occ - m.cal.empty) : null;
+        if (diff != null && diff < 100) toast('warn', `${b.id} · selisih pad kosong dan terisi hanya ${Math.round(diff)} Hz`, 'Deteksi kehadiran bisa keliru. Ulangi kalibrasi, atau pilih Kalibrasi ulang supaya pasien dianggap selalu ada.');
+      }, 5000);
+      return;
+    }
+    if (cmd === 'PING') { setTimeout(() => done(!m.isOffline(), m.isOffline() ? 'ESP32 tidak mengirim data' : `${Math.round(m.rate)} sampel/dtk · ${m.fw.status || 'OK'}`), 300); return; }
+    setTimeout(() => done(true), 300);
+  }
+  function usbCalReset(b) {
+    const m = b.mon;
+    m.cal = null; usbSaveCal(b.id, null);
+    if (!m.present) { m.present = true; m.lastEffT = ward.t; m.emit(ward.t, 'kembali'); }
+  }
+  function usbStatHTML() {
+    const b = usbBed(), m = b && b.mon.serial ? b.mon : null;
+    const fwInfo = usb.link && usb.link.info.length ? `<br><small class="muted">Firmware: ${esc(usb.link.info[0])}</small>` : '';
+    if (!m) return usb.state === 'error' ? `<span style="color:var(--hiText)">${esc(usb.msg)}</span>` : 'Belum tersambung.';
+    if (!usbLive()) return `<b>${b.id}</b> · <span style="color:var(--lo)">${esc(usb.state === 'on' ? 'tersambung, menunggu data' : usb.msg || 'terputus')}</span>${fwInfo}`;
+    const fw = m.fw;
+    return [`<b>${b.id}</b> · menerima data`, `${Math.round(m.rate)} sampel/dtk`,
+      Number.isFinite(fw.f) ? `osilator ${Math.round(fw.f).toLocaleString('id-ID')} Hz` : '',
+      Number.isFinite(fw.rms) ? `RMS ${dec(fw.rms, 1)} Hz` : '',
+      fw.status ? `status ${esc(fw.status)}` : '',
+      `RR ${m.rr != null ? Math.round(m.rr) : '—'} /mnt`].filter(Boolean).join(' · ') + fwInfo;
+  }
+  function usbHTML() {
+    const ok = !!(SER && SER.supported), on = usbOn();
+    const sel = usb.bedId || (store.get('siagabed.usb', null) || {}).bed || ward.beds[0].id;
+    const opts = ward.beds.map(b => `<option value="${b.id}"${b.id === sel ? ' selected' : ''}>${b.id} · ${esc(patient(b))}</option>`).join('');
+    const intro = !ok ? 'Peramban ini tidak mendukung Web Serial. Pakai Chrome atau Edge di komputer.'
+      : `Baca keluaran Serial firmware esp32_breath_counter (115200 baud) untuk satu bed. Bed lain tetap ${LIVE ? 'dari hub' : 'simulasi'}, dan bed ini bisa dikembalikan ke ${usbBack()} kapan saja. Tutup Serial Monitor Arduino dulu, karena port hanya bisa dipakai satu aplikasi. Alarm bed ini hanya berbunyi di layar ini. Supaya sampai ke ponsel, jalankan <b>usb_hub.py</b> di siagabed-backend dengan mode live.`;
+    const btns = on
+      ? `${usb.link && usb.link.state === 'on' ? '' : '<button type="button" class="btn ink" data-act="usb-on">Sambungkan ulang</button>'}<button type="button" class="btn ghost" data-act="usb-off">Putuskan · kembali ke ${usbBack()}</button>`
+      : `<select id="usb-bed" aria-label="Bed untuk sensor USB">${opts}</select><button type="button" class="btn ink" data-act="usb-on"${ok ? '' : ' disabled'}>Sambungkan sensor USB</button>`;
+    return `<div><div class="k" style="margin-bottom:8px">Sensor USB (ESP32)</div><p>${intro}</p>
+        <p data-usbstat style="margin-top:8px">${usbStatHTML()}</p>
+        <div class="row" style="margin-top:10px">${btns}</div></div>`;
+  }
+  function usbTick() {
+    if (S.view !== 'tim') return;
+    const el = $('[data-usbstat]');
+    if (el) setHTML(el, usbStatHTML());
+  }
   if (LIVE) ward.notice = () => {};                  /* hasil perintah ditangani per item di send() */
   let bootWall = LIVE ? ward.base : Date.now();
   let booting = true;
@@ -185,7 +324,11 @@
   }
   function tkCause(b) {
     const m = b.mon;
+    if (m.serial && m.isOffline()) return { short: 'sensor USB', long: 'ESP32 tidak mengirim data lewat USB', step: 'Periksa kabel USB dan ESP32, lalu sambungkan ulang dari menu Tim' };
+    if (m.serial && m.fw.status === 'OSC_ERROR') return { short: 'osilator', long: 'Osilator kumparan tidak berjalan normal', step: 'Periksa catu daya dan sambungan papan kumparan' };
     if (isLiveBed(m) && m.isOffline()) return { short: 'hub offline', long: 'Hub tidak mengirim data', step: 'Periksa daya dan Wi-Fi hub di bedhead, lalu hubungi teknisi' };
+    if (m.fault && m.faultCause === 'usb') return { short: 'sensor USB', long: 'ESP32 tidak mengirim data ke hub USB', step: 'Periksa kabel USB ESP32 di laptop hub. Hub menyambung ulang sendiri.' };
+    if (m.fault && m.faultCause === 'osc') return { short: 'osilator', long: 'Osilator kumparan tidak berjalan normal', step: 'Periksa catu daya dan sambungan papan kumparan' };
     if (m.fault) return { short: 'pad terlepas', long: 'Pad terlepas', step: 'Periksa konektor di bedhead' };
     if (m.heldLong) return { short: 'sinyal tidak andal', long: 'Sinyal tidak andal terlalu lama', step: 'Periksa posisi pad di bawah sprei' };
     return { short: 'sinyal hilang', long: 'Sinyal hilang', step: 'Periksa pad dan hub di bedhead' };
@@ -215,7 +358,7 @@
       case 'away': { const s0 = S.since.get('away:' + b.id); return `Turun dari bed${s0 != null ? ` ${durM(t - s0)}` : ''} · tidak dibunyikan`; }
       case 'held': return 'Pasien bergerak · sinyal ditahan, tidak dibunyikan';
       case 'empty': return 'Bed siap pakai';
-      case 'load': return 'Menunggu data pertama dari hub';
+      case 'load': return b.mon.serial ? 'Menunggu data pertama dari sensor USB' : 'Menunggu data pertama dari hub';
       default: return 'Napas dalam batas normal';
     }
   }
@@ -234,6 +377,7 @@
   }
   ward.on(ev => {
     const b = ev.bed, t = ev.t;
+    if (b && b.mon.serial && !ev.usb) return;      /* bed sensor USB: kejadian hub atau simulasi untuk bed ini diabaikan */
     /* nama yang mengirim aksi dari perangkat ini ikut tercatat di kejadiannya */
     if (b && ['codeblue', 'pra_batal', 'cb_selesai'].includes(ev.type) && !(ev.data && ev.data.by) && S.actor.has(b.id)) {
       if (ev.type !== 'codeblue' || String((ev.data || {}).source).includes('perawat')) ev = Object.assign({}, ev, { data: Object.assign({}, ev.data, { by: S.actor.get(b.id) }) });
@@ -304,6 +448,12 @@
   /* ------------------------------------------------------------------ aksi ke hub */
   function send(b, kind) {
     S.actor.set(b.id, me());
+    if (b.mon.serial) {                              /* bed sensor USB: aturan alarm berjalan di dasbor */
+      const m = b.mon, t = ward.t;
+      if (kind === 'cancel') m.cancelPra(t); else if (kind === 'confirm') m.confirmCB(t); else if (kind === 'close') m.closeCB(t); else if (kind === 'manual') m.manualCB(t);
+      render();
+      return;
+    }
     if (!LIVE) {
       if (kind === 'cancel') ward.cancel(b);
       else if (kind === 'confirm') ward.confirm(b);
@@ -380,7 +530,7 @@
             <button type="button" class="btn hold" data-act="hold">Batalkan · pasien sudah dicek <small>tahan 2 dtk</small></button>`}</div>
           ${fail ? `<div class="fail" role="alert"><div class="t"><b>Pembatalan belum sampai ke hub</b>Batalkan langsung di bedhead ${b.id}. Hitung mundur tetap berjalan.</div><button type="button" class="btn ghost" data-act="retry">Coba lagi</button></div>` : ''}
         </div>`,
-        v: { n, s: `mulai ${hms(wallAt(m.praT))} · bunyi berulang`, ap: `${Math.floor(m.apneaSec)} dtk`, cd: `${praLeft(b, t)} dtk` },
+        v: { n, s: `mulai ${hms(wallAt(m.praT))} · bunyi berulang${srcTag(b)}`, ap: `${Math.floor(m.apneaSec)} dtk`, cd: `${praLeft(b, t)} dtk` },
         ticks: praLeft(b, t)
       };
     }
@@ -393,7 +543,7 @@
           <div class="why"><span class="r"><span data-v="r"></span><small>berjalan</small></span><span class="sp"></span><span class="t">Waktu respons dicatat saat tim<br>menekan <b>Tim sudah tiba</b></span></div>
           <div class="acts">${sending ? sendingBtn('', true) : '<button type="button" class="btn onred" data-act="close">Tim sudah tiba</button>'}<button type="button" class="btn onred2" data-act="detail">Buka detail</button></div>
         </div>`,
-        v: { n, s: `mulai ${hms(wallAt(m.cbT))} · ${cbSource(m.cbSource)} · ponsel Tim Code Blue berbunyi`, r: durS(t - m.cbT) }
+        v: { n, s: `mulai ${hms(wallAt(m.cbT))} · ${cbSource(m.cbSource)} · ponsel Tim Code Blue berbunyi${srcTag(b)}`, r: durS(t - m.cbT) }
       };
     }
     const row = (cls, lv, bid, pt, why, acts) => `<div class="ri ${cls}" data-bed="${b.id}"><span class="lv"><span class="ordb" data-v="n">${n}</span>${lv}</span><span class="bid">${bid}</span><span class="pt">${pt}</span><span class="why">${why}</span><span class="acts">${acts}</span></div>`;
@@ -493,7 +643,7 @@
   /* ------------------------------------------------------------------ denah */
   const DENSE = window.matchMedia('(max-width: 1599px)');
   const roomsEl = $('#rooms');
-  const tileHTML = (x, extra) => `<button type="button" class="cb glass2${extra || ''}" data-bed="${x.id}" aria-pressed="false"><div class="h"><span class="id">${x.id}</span><span class="ob" hidden></span></div><div class="gl"></div><div class="st"></div><div class="sub"></div></button>`;
+  const tileHTML = (x, extra) => `<button type="button" class="cb glass2${extra || ''}" data-bed="${x.id}" aria-pressed="false"><div class="h"><span class="id">${x.id}</span><span class="ob" hidden></span></div><span class="rs" hidden><span class="rsl">Sensor </span>asli</span><div class="gl"></div><div class="st"></div><div class="sub"></div></button>`;
   roomsEl.innerHTML = ROOMS.map(r => `<div class="room" data-room="${r}"><div class="rl"><b>Kamar ${r}</b><span data-v="np"></span></div><div class="strip">${
     ROSTER.filter(x => x.room === r).map(x => tileHTML(x)).join('')
   }</div><div class="band-slot"></div></div>`).join('');
@@ -531,8 +681,10 @@
     sub.classList.toggle('cd', s === 'pra');
     const q = qIndex.get(b.id);
     ob.hidden = !q; if (q && ob.textContent !== String(q)) ob.textContent = String(q);
+    const rs = $('.rs', el), real = !ctx && realBed(b) && mixedWard();
+    if (rs && rs.hidden === real) rs.hidden = !real;
     el.setAttribute('aria-pressed', String(!!selected));
-    el.setAttribute('aria-label', `${b.id}, ${word}, ${sv}`);
+    el.setAttribute('aria-label', `${b.id}, ${word}, ${sv}${real ? ', sensor asli' : ''}`);
   }
   function tallyHTML(w) {
     const cnt = {};
@@ -618,18 +770,30 @@
     });
     if (m.trend.length !== bandTrend) { bandTrend = m.trend.length; $('[data-spark]', band).innerHTML = spark(b, t, 230, 110); }
   }
-  const dataAge = b => LIVE ? (b.mon.lastStWall ? Math.max(0, Math.round((Date.now() - b.mon.lastStWall) / 1000)) : null) : 1;
+  const dataAge = b => b.mon.serial ? (b.mon.lastSampleT != null ? Math.max(0, Math.round(ward.t - b.mon.lastSampleT)) : null) : LIVE ? (b.mon.lastStWall ? Math.max(0, Math.round((Date.now() - b.mon.lastStWall) / 1000)) : null) : 1;
 
   /* ------------------------------------------------------------------ bilah atas, strip alarm, footer */
   function terpantau() {
     const all = ward.beds.length;
     return { n: ward.beds.filter(b => { const s = stat(b); return s !== 'tk' && s !== 'load'; }).length, all };
   }
+  /* Penanda sumber data. Simulasi selalu tertulis, juga saat sebagian bed memakai sensor asli. */
   function srcLine() {
-    if (!LIVE) return { html: `<span class="dot sim"></span><b>Simulasi</b> · ${ward.beds.length} bed`, cls: '' };
+    const DIV = ' <span class="pdiv" aria-hidden="true"></span> ';   /* spasi: teks tetap terbaca utuh oleh pembaca layar */
+    const W = h => `<span class="pw">${h}</span>`;                      /* hanya di layar lebar; disembunyikan di ≤ 1599 px */
+    if (!LIVE) {
+      if (!usbOn()) return { html: `<span class="dot sim"></span><b>Simulasi</b> · ${ward.beds.length} bed`, cls: '' };
+      const ok = usbLive();
+      return { html: `<span class="dot sim"></span><b>Simulasi</b>${W(` · ${ward.beds.length - 1} bed`)}${DIV}<span class="dot${ok ? '' : ' warn'}"></span><b>${ok ? 'Sensor asli' : 'USB terputus'}</b>${W(` · ${usb.bedId}`)}`, cls: ok ? '' : 'warn' };
+    }
     if (ward.conn !== 'tersambung') return { html: `<span class="dot bad"></span><b>Live</b> · broker ${esc(ward.conn)}`, cls: 'bad' };
     const up = ward.beds.filter(b => !b.mon.isOffline()).length, all = ward.beds.length;
-    return up === all ? { html: `<span class="dot"></span><b>Live</b> · ${all} hub`, cls: '' } : { html: `<span class="dot warn"></span><b>Live</b> · ${up}/${all} hub`, cls: 'warn' };
+    const nSim = ward.beds.filter(simBed).length, nReal = ward.beds.filter(realBed).length;
+    if (!nSim) return up === all ? { html: `<span class="dot"></span><b>Live</b> · ${all} hub`, cls: '' } : { html: `<span class="dot warn"></span><b>Live</b> · ${up}/${all} hub`, cls: 'warn' };
+    const kind = nSim === all ? '<span class="dot sim"></span><b>Simulasi</b> · hub palsu'
+      : `<span class="dot sim"></span>${nSim} simulasi${nReal ? ` <span class="dot"></span>${nReal} sensor asli` : ''}`;
+    return up === all ? { html: `${W(`<span class="dot"></span><b>Live</b> · ${all} hub`)}${W(DIV)}${kind}`, cls: '' }
+      : { html: `<span class="dot warn"></span><b>Live</b> · ${up}/${all} hub${DIV}${kind}`, cls: 'warn' };
   }
   function setHTML(el, h) { if (el.dataset.h !== h) { el.innerHTML = h; el.dataset.h = h; } }
   function renderTop() {
@@ -843,7 +1007,8 @@
     const b = ward.byId(S.detailBed);
     if (!b) return;
     const s = stat(b), m = b.mon, chk = S.checked.get(b.id), sending = S.sending.get(b.id);
-    const key = `${b.id}:${s}:${chk ? 1 : 0}:${sending ? 1 : 0}`;
+    const src = m.serial ? 'usb' : realBed(b) ? 'asli' : simBed(b) ? 'sim' : '';
+    const key = `${b.id}:${s}:${chk ? 1 : 0}:${sending ? 1 : 0}:${src}`;
     if (key !== detailKey) {
       detailKey = key; detailTrendLen = -1;
       let acts = '';
@@ -860,8 +1025,8 @@
           <span class="kchip s-${s}">${CHIP_ICON[s]()}${ST[s].word}</span>
           <span class="hpt">${b.name ? `<b>${esc(b.name)}</b> · ${b.age}<br>${esc(b.dxs)}` : `<b>${esc(patient(b))}</b>`}</span><span class="acts">${acts}</span></div>
         <div class="mon glass" style="--rrc:${RRC[s] || 'var(--tx)'}">
-          <div class="wavebox"><div style="display:flex;align-items:center;gap:16px"><div class="k">Gelombang napas · live</div><span class="sp"></span>
-            <span class="legendw"><span><i></i>napas efektif</span><span>${FS} sampel/dtk</span></span></div>
+          <div class="wavebox"><div style="display:flex;align-items:center;gap:16px"><div class="k">Gelombang napas · ${src === 'usb' || src === 'asli' ? 'sensor asli' : src === 'sim' ? (LIVE ? 'simulasi hub palsu' : 'simulasi') : 'live'}</div><span class="sp"></span>
+            <span class="legendw"><span><i></i>napas efektif</span><span>${src === 'usb' || src === 'asli' ? 'ESP32 · 10 sampel/dtk' : `${FS} sampel/dtk`}</span></span></div>
             <canvas id="wave" aria-label="Gelombang napas 30 detik terakhir ${b.id}" role="img"></canvas><div class="wl"><span>−30 dtk</span><span>sekarang</span></div>
             <div data-wide style="margin-top:6px"></div></div>
           <div class="side"><div><div class="k">Laju napas</div><div class="rrbig"><span data-v="rr"></span><small data-v="unit"></small></div><div class="rrwhy" data-v="rrwhy"></div></div>
@@ -873,7 +1038,7 @@
           <div class="card glass"><div class="k">Sinyal dan pad</div><div class="sq" data-sq></div></div>
           <div class="card glass"><div class="k">Riwayat hari ini</div><div class="tl" data-tl></div></div>
           <div class="card glass"><div class="k">Identitas</div>${identityHTML(b)}
-            <details class="tech glass2"><summary><span>Data teknis · hub ${esc(b.key || b.id)}</span><span>▸</span></summary><div class="sq" data-tech></div></details></div>
+            <details class="tech glass2"><summary><span>Data teknis · ${m.serial ? 'sensor USB' : `hub ${esc(b.key || b.id)}`}</span><span>▸</span></summary><div class="sq" data-tech></div></details></div>
         </div>`;
     }
     const rr = rrNow(b), quiet = s === 'empty' || s === 'away';
@@ -899,7 +1064,7 @@
       case 'away': return `<b>Pasien turun dari bed</b><small>${stateLine(b, t, s)}</small>`;
       case 'held': return `<b>Pasien bergerak</b><small>Sinyal ditahan sampai tenang lagi. Tidak dibunyikan.</small>`;
       case 'empty': return `<b>Bed kosong</b><small>Siap pakai. Pemantauan mulai sendiri saat pasien berbaring.</small>`;
-      case 'load': return `<b>Menunggu data</b><small>Hub belum mengirim status.</small>`;
+      case 'load': return `<b>Menunggu data</b><small>${b.mon.serial ? 'ESP32 belum mengirim data lewat USB.' : 'Hub belum mengirim status.'}</small>`;
       default: return `<b>RR ${rr ?? '—'} /mnt</b> · dalam batas ${CFG.rrWarnLow + 1}–${CFG.rrWarnHigh}<small>Tidak ada alarm aktif</small>`;
     }
   }
@@ -909,7 +1074,7 @@
     const age = dataAge(b);
     return `<span>Kualitas sinyal</span>${s === 'tk' && m.fault ? '<b style="color:var(--lo)">Tidak ada sinyal</b>' : ql}
       <span>Kehadiran</span><b>${m.present ? 'Pasien di bed' : 'Tidak ada pasien'}</b>
-      <span>Kalibrasi</span><b>${LIVE ? (b.cal === 0 ? '<span style="color:var(--lo)">Belum</span>' : 'Tersimpan di hub') : 'Tersimpan · 2 titik'}</b>
+      <span>Kalibrasi</span><b>${m.serial ? (m.calibrated() ? 'Tersimpan · 2 titik' : '<span style="color:var(--lo)">Belum</span> · pasien dianggap selalu ada') : LIVE ? (!b.cal ? '<span style="color:var(--lo)">Belum</span> · pasien dianggap selalu ada' : 'Tersimpan di hub') : 'Tersimpan · 2 titik'}</b>
       <span>Data terakhir</span><b>${age == null ? '—' : `${age} dtk lalu`}</b>`;
   }
   function timelineHTML(b) {
@@ -932,8 +1097,21 @@
   }
   function techHTML(b) {
     const m = b.mon, mhz = f => dec(f / 1e6, 4) + ' MHz';
-    const cal = !LIVE && b.cal ? `${mhz(b.cal.empty)} / ${mhz(b.cal.occ)}` : '—';
-    return `<span>Sumber</span><b>${LIVE ? 'Hub (MQTT)' : 'Simulasi'}</b><span>Kalibrasi kosong / terisi</span><b>${cal}</b>
+    if (m.serial) {
+      const fw = m.fw, hz = f => (Number.isFinite(f) ? `${Math.round(f).toLocaleString('id-ID')} Hz` : '—');
+      return `<span>Sumber</span><b>Sensor USB · ESP32</b><span>Status firmware</span><b>${esc(fw.status || '—')}</b>
+      <span>Frekuensi osilator</span><b>${hz(fw.f)}</b><span>Ayunan napas (RMS)</span><b>${Number.isFinite(fw.rms) ? dec(fw.rms, 1) + ' Hz' : '—'}</b>
+      <span>Kalibrasi kosong / terisi</span><b>${m.calibrated() ? `${hz(m.cal.empty)} / ${hz(m.cal.occ)}` : 'Belum'}</b><span>Mode demo</span><b>${m.demo ? 'nyala' : 'mati'}</b>`;
+    }
+    const cal = b.cal && b.cal.empty != null && b.cal.occ != null ? `${mhz(b.cal.empty)} / ${mhz(b.cal.occ)}` : '—';
+    if (LIVE) {
+      const src = m.sensor === 'FAKE' ? 'Hub palsu · simulasi' : m.sensor === 'UJI' ? 'Hub USB · sinyal uji (simulasi)' : m.sensor ? `Hub · sensor ${esc(m.sensor)}` : 'Hub (MQTT)';
+      return `<span>Sumber</span><b>${src}</b>${m.hubFw ? `<span>Firmware hub</span><b>${esc(m.hubFw)}</b>` : ''}
+      ${m.fwSt ? `<span>Status ESP32</span><b>${esc(m.fwSt)}${m.sps ? ` · ${dec(m.sps, 1)} sampel/dtk` : ''}</b>` : ''}
+      <span>Frekuensi pad</span><b>${m.lastF ? `${Math.round(m.lastF).toLocaleString('id-ID')} Hz` : '—'}</b><span>Kalibrasi kosong / terisi</span><b>${cal}</b>
+      <span>SQI</span><b>${typeof m.sqi === 'number' ? dec(m.sqi, 2) : '—'}</b><span>Mode demo hub</span><b>${m.demo ? 'nyala' : 'mati'}</b>`;
+    }
+    return `<span>Sumber</span><b>Simulasi</b><span>Kalibrasi kosong / terisi</span><b>${cal}</b>
       <span>SQI</span><b>${typeof m.sqi === 'number' ? dec(m.sqi, 2) : '—'}</b><span>Mode demo hub</span><b>${m.demo ? 'nyala' : 'mati'}</b>`;
   }
   /* Gelombang napas 30 dtk: sinyal terfilter dari hub/engine, penanda hijau = napas efektif. */
@@ -1043,6 +1221,7 @@
       : `<div><div class="k" style="margin-bottom:8px">Skenario simulasi</div><div class="row" style="margin-bottom:10px"><select id="tim-bed" aria-label="Bed">${bedOpts}</select></div>
         <div class="grid">${SCEN.map(([k, l]) => `<button type="button" class="btn ghost" data-scen="${k}">${l}</button>`).join('')}</div></div>
         <label class="switch"><input type="checkbox" id="tim-demo"${ward.demo ? ' checked' : ''}> Waktu tahan singkat (${CFG.holdDemo} dtk), untuk latihan</label>`}
+      ${usbHTML()}
       <div><div class="k" style="margin-bottom:8px">Tampilan</div>
         <div class="row"><select id="tim-tema" aria-label="Tema"><option value="">Ikuti sistem</option><option value="terang"${pref.tema === 'terang' ? ' selected' : ''}>Terang</option><option value="gelap"${pref.tema === 'gelap' ? ' selected' : ''}>Gelap</option></select>
         <label class="switch"><input type="checkbox" id="tim-ringan"${doc.documentElement.dataset.render === 'ringan' ? ' checked' : ''}> Tampilan ringan (tanpa blur)</label></div></div>
@@ -1107,7 +1286,7 @@
   function renderNursePhone(t) {
     const items = queueItems(t), root = $('[data-ph]', phoneEl);
     S.order = items.map(x => x.id);
-    const tp = terpantau(), src = srcLine(), live = !LIVE ? 'Simulasi' : ward.conn !== 'tersambung' ? 'Terputus' : 'Live';
+    const tp = terpantau(), src = srcLine(), live = !LIVE ? (usbOn() ? 'Sim + USB' : 'Simulasi') : ward.conn !== 'tersambung' ? 'Terputus' : ward.beds.some(simBed) ? 'Live · sim' : 'Live';   /* pendek: muat di 390 px */
     keyed($('[data-abar]', root), `a:${tp.n}/${tp.all}:${live}:${S.sound}:${src.cls}:${S.nurse}`,
       `<div class="abar"><div class="w">Bangsal Melati<small>Lantai 3 · ${esc(S.nurse)}</small></div><span class="sp"></span>
         <span class="mp glass2"><b>${tp.n}/${tp.all}</b>&nbsp;bed</span><span class="mp glass2 ${src.cls}"><span class="dot ${LIVE ? src.cls : 'sim'}"></span>${live}</span>
@@ -1221,7 +1400,8 @@
     const disc = LIVE && ward.conn !== 'tersambung', full = !disc && cbs.length === 1;
     root.className = `ph${full ? ' cbfull' : ''}`;
     doc.body.classList.toggle('cbmode', full);
-    const conn = !LIVE ? '<span class="mp glass2"><span class="dot sim"></span>Simulasi</span>' : disc ? `<span class="mp glass2 bad">${ICON.tk(14)}Terputus</span>` : '<span class="mp glass2"><span class="dot"></span>Tersambung</span>';
+    const nSimLive = LIVE ? ward.beds.filter(simBed).length : 0;
+    const conn = !LIVE ? `<span class="mp glass2"><span class="dot sim"></span>${usbOn() ? 'Sim + USB' : 'Simulasi'}</span>` : disc ? `<span class="mp glass2 bad">${ICON.tk(14)}Terputus</span>` : '<span class="mp glass2"><span class="dot"></span>Tersambung</span>';
     const abar = `<div class="abar"><div class="w">Tim Code Blue<small>${esc(S.teamName)} · <button type="button" data-act="tim-restart">ganti</button></small></div><span class="sp"></span>${conn}</div>`;
     if (disc) {
       keyed(root, 'disc', `${abar}<div class="idle"><div class="ring lo">${ICON.tk(72)}</div><div class="it" style="color:var(--lo)">Tidak tersambung</div><div class="is"><b style="color:var(--tx)">Panggilan Code Blue tidak akan masuk</b><br>sampai ponsel tersambung lagi</div></div>
@@ -1235,7 +1415,7 @@
         <div class="cbh">${ICON.siren('#fff', 26)}<span>CODE BLUE</span><span class="sp"></span><span class="tt">mulai ${hms(wallAt(m.cbT))}</span></div>
         <div class="cbw">Bangsal Melati · Lantai 3</div><div class="cbbed">${b.id}</div><div class="cbroom">Kamar ${b.room} · Bed ${b.bed}</div>
         <div class="cbel"><span class="n" data-v="el"></span><span class="l">berjalan</span></div>
-        <div class="cbinfo"><span>Sumber</span><b>${esc(cap(cbSource(m.cbSource)))}</b><span>Pasien</span><b>${b.name ? `${esc(b.name)} · ${b.age}<br>${esc(b.dxs)}` : esc(patient(b))}</b></div>
+        <div class="cbinfo"><span>Sumber</span><b>${esc(cap(cbSource(m.cbSource)))}${srcTag(b)}</b><span>Pasien</span><b>${b.name ? `${esc(b.name)} · ${b.age}<br>${esc(b.dxs)}` : esc(patient(b))}</b></div>
         ${sending ? `<span class="cbbtn sending" role="status">${ICON.spin('#fff', 20)}Mengirim…</span>` : '<button type="button" class="cbbtn" data-act="close">Tim sudah tiba</button>'}
         <div class="cbfoot">Tidak ada Code Blue lain</div></div>`, { el: mmss(t - m.cbT) });
       return;
@@ -1243,15 +1423,15 @@
     if (cbs.length > 1) {
       keyed(root, 'multi:' + cbs.map(b => b.id + (S.sending.has(b.id) ? 's' : '')).join(','), `${abar}<div class="mh2"><h2 style="color:var(--hiText)">${cbs.length} Code Blue aktif</h2><span>paling lama di atas</span></div>
         ${cbs.map(b => `<div class="ccard" data-bed="${b.id}"><div class="cbh">${ICON.siren('#fff', 20)}<span>CODE BLUE</span><span class="sp"></span><span class="tt" data-v="el${b.id}"></span></div>
-          <div class="bb"><b>${b.id}</b><span>Kamar ${b.room} · Bed ${b.bed}</span></div><div class="ci">${esc(cap(cbSource(b.mon.cbSource)))}<br>${b.name ? `${esc(b.name)} · ${b.age} · ${esc(b.dxs)}` : esc(patient(b))}</div>
+          <div class="bb"><b>${b.id}</b><span>Kamar ${b.room} · Bed ${b.bed}</span></div><div class="ci">${esc(cap(cbSource(b.mon.cbSource)))}${srcTag(b)}<br>${b.name ? `${esc(b.name)} · ${b.age} · ${esc(b.dxs)}` : esc(patient(b))}</div>
           ${S.sending.has(b.id) ? `<span class="cbbtn sending">${ICON.spin('#fff', 18)}Mengirim…</span>` : '<button type="button" class="cbbtn" data-act="close">Tim sudah tiba</button>'}</div>`).join('')}`,
         Object.fromEntries(cbs.map(b => ['el' + b.id, mmss(t - b.mon.cbT)])));
       return;
     }
     const lc = S.lastClosed && Date.now() - wallAt(S.lastClosed.t).getTime() < 10 * 60e3 ? S.lastClosed : null;
-    keyed(root, `idle:${lc ? lc.bedId + lc.t : ''}:${LIVE ? ward.conn : 'sim'}`, `${abar}<div class="idle"><div class="ring ${lc ? 'ok' : 'glass2'}">${lc ? ICON.check(72) : ICON.siren('var(--tx3)', 64)}</div><div class="it">Siaga</div><div class="is">${lc ? 'Tidak ada panggilan lain' : 'Tidak ada panggilan'}</div></div>
+    keyed(root, `idle:${lc ? lc.bedId + lc.t : ''}:${LIVE ? ward.conn : 'sim'}:${nSimLive}:${usbOn() ? 1 : 0}`, `${abar}<div class="idle"><div class="ring ${lc ? 'ok' : 'glass2'}">${lc ? ICON.check(72) : ICON.siren('var(--tx3)', 64)}</div><div class="it">Siaga</div><div class="is">${lc ? 'Tidak ada panggilan lain' : 'Tidak ada panggilan'}</div></div>
       ${lc ? `<div class="mcard glass"><div class="ln">${ICON.ok(10)}<b>Code Blue ${lc.bedId} ditutup</b><span class="t">${hms(wallAt(lc.t))}</span></div><div class="ln2">${lc.by ? `Oleh ${esc(lc.by)}${lc.by === S.teamName ? ' (Anda)' : ''} · ` : ''}waktu respons ${durS(lc.resp)}</div></div>`
-        : `<div class="mcard glass"><div class="ln"><span class="dot${LIVE ? '' : ' sim'}"></span><b>${LIVE ? 'Tersambung · Live' : 'Simulasi'}</b><span class="t" data-v="chk"></span></div><div class="ln2">Bangsal Melati · Lantai 3</div></div>`}
+        : `<div class="mcard glass"><div class="ln"><span class="dot${LIVE ? '' : ' sim'}"></span><b>${LIVE ? 'Tersambung · Live' : usbOn() ? `Simulasi + sensor asli ${usb.bedId}` : 'Simulasi'}</b><span class="t" data-v="chk"></span></div><div class="ln2">Bangsal Melati · Lantai 3${nSimLive ? ` · ${nSimLive} bed simulasi` : ''}</div></div>`}
       <div class="mcard glass o1c">${INFO}<span>Biarkan halaman ini terbuka. Ponsel hanya berbunyi saat halaman terbuka dan layar menyala.</span></div>
       <div style="margin:0 12px"><button type="button" class="btn ghost mb44" data-snd="cb">▶ Tes bunyi Code Blue</button></div>`, { chk: `dicek ${hm(new Date())}` });
   }
@@ -1602,7 +1782,7 @@
   Object.assign(S, { hubF: 'perhatian', hubSel: null, hubCmd: new Map(), calib: new Map(), rec: null, tech: store.get('siagabed.teknisi', TECHS[0]) });
   function hubInfo(b) {
     const m = b.mon, s = stat(b), off = isLiveBed(m) ? m.isOffline() : false;
-    const c = S.calib.get(b.id) || {}, calOk = LIVE ? !!b.cal || !!(c.empty && c.occ) : !(c.fresh && !(c.empty && c.occ));
+    const c = S.calib.get(b.id) || {}, calOk = m.serial ? m.calibrated() : LIVE ? !!b.cal || !!(c.empty && c.occ) : !(c.fresh && !(c.empty && c.occ));
     return { s, off, calOk, attention: off || s === 'tk' || !calOk };
   }
   function hubSend(b, cmd) {
@@ -1617,6 +1797,7 @@
       if (!ok) toast('bad', `${b.id} · ${label} ditolak`, pesan || 'Hub tidak membalas.');
       render();
     };
+    if (b.mon.serial) { usbHubCmd(b, cmd, done); render(); return; }
     if (!LIVE) { setTimeout(() => done(true), cmd.startsWith('CAL') ? 5000 : 500); render(); return; }
     ward.user = S.tech;
     Promise.resolve(ward.command(b, cmd, true)).then(r => done(!!(r && r.ok), r && r.pesan)).finally(() => { ward.user = me(); });
@@ -1643,7 +1824,7 @@
     const cmdCell = b => { const c = S.hubCmd.get(b.id); if (!c) return '—'; return `<span class="ev ${c.state === 'ok' ? 'ok' : c.state === 'fail' ? 'no' : ''}">${c.state === 'sending' ? ICON.spin('currentColor', 12) : ''}${esc(c.label)} · ${c.state === 'ok' ? 'diterima' : c.state === 'fail' ? 'ditolak' : 'mengirim'}</span><small>${hm(new Date(c.wall))}</small>`; };
     const row = b => {
       const i = info.get(b.id), m = b.mon, age = dataAge(b);
-      const hub = i.off ? `<span class="onl" style="color:var(--lo)">${ICON.tk(14)}Offline</span><small>hub ${esc(b.key || b.id)}</small>` : `<span class="onl"><span class="dot"></span>Online</span><small>hub ${esc(b.key || b.id)}</small>`;
+      const hub = m.serial ? (i.off ? `<span class="onl" style="color:var(--lo)">${ICON.tk(14)}Terputus</span><small>sensor USB</small>` : `<span class="onl"><span class="dot"></span>USB</span><small>ESP32 · ${Math.round(m.rate)} sampel/dtk</small>`) : i.off ? `<span class="onl" style="color:var(--lo)">${ICON.tk(14)}Offline</span><small>hub ${esc(b.key || b.id)}</small>` : `<span class="onl"><span class="dot"></span>Online</span><small>hub ${esc(b.key || b.id)}</small>`;
       const pad = i.off ? '—' : m.fault ? lgc('tk', 'Pad terlepas') : !m.present ? 'Tidak ada pasien' : `Terpasang · SQI ${typeof m.sqi === 'number' ? dec(m.sqi, 2) : '—'}`;
       const c = S.calib.get(b.id) || {};
       const cal = !i.calOk ? lgc('tk', 'Belum dikalibrasi') : c.occ ? `diperbarui ${hm(new Date(c.occ))}` : 'Tersimpan';
@@ -1682,9 +1863,9 @@
     const el = doc.createElement('div');
     el.className = `toast glass2${kind === 'bad' ? ' bad' : ''}`;
     el.setAttribute('role', kind === 'bad' ? 'alert' : 'status');
-    el.innerHTML = `${kind === 'bad' ? ICON.tri('var(--hiText)', 18) : ICON.check(20)}<div><b>${esc(title)}</b>${esc(text || '')}</div>`;
+    el.innerHTML = `${kind === 'bad' ? ICON.tri('var(--hiText)', 18) : kind === 'warn' ? ICON.tri('var(--md)', 18) : ICON.check(20)}<div><b>${esc(title)}</b>${esc(text || '')}</div>`;
     $('#toasts').appendChild(el);
-    setTimeout(() => el.remove(), kind === 'bad' ? 9000 : 5000);
+    setTimeout(() => el.remove(), kind === 'bad' ? 9000 : kind === 'warn' ? 7000 : 5000);
   }
   function announce(text) { const a = $('#announce'); a.textContent = ''; setTimeout(() => { a.textContent = text; }, 30); }
 
@@ -1724,7 +1905,7 @@
     const snd = e.target.closest('[data-snd]');
     if (snd) { soundOn(); S.sound = S.view !== 'mulai' ? S.sound : false; play(snd.dataset.snd, true); return; }
     const scen = e.target.closest('[data-scen]');
-    if (scen && !LIVE) { const b = ward.byId($('#tim-bed').value); S.timBed = b.id; if (scen.dataset.scen === 'manual') send(b, 'manual'); else ward.scenario(b, scen.dataset.scen); toast('ok', `${b.id} · ${scen.textContent}`, 'Skenario simulasi dijalankan.'); render(); return; }
+    if (scen && !LIVE) { const b = ward.byId($('#tim-bed').value); S.timBed = b.id; if (b.mon.serial) { toast('warn', `${b.id} memakai sensor USB`, 'Skenario simulasi tidak berlaku untuk bed ini. Pilih bed lain.'); return; } if (scen.dataset.scen === 'manual') send(b, 'manual'); else ward.scenario(b, scen.dataset.scen); toast('ok', `${b.id} · ${scen.textContent}`, 'Skenario simulasi dijalankan.'); render(); return; }
     const act = e.target.closest('[data-act]');
     if (!act) return;
     const b = bedOf(act);
@@ -1766,6 +1947,8 @@
       case 'log-range': S.logF.range = act.dataset.r; break;
       case 'log-fu': S.logF.fu = !S.logF.fu; break;
       case 'log-export': exportCSV(); return;
+      case 'usb-on': usbConnect(null, ($('#usb-bed') || {}).value); return;
+      case 'usb-off': usbDisconnect(); return;
       case 'hub-open': setView('hub'); break;
       case 'hub-f': S.hubF = act.dataset.f; break;
       case 'hub-ping': if (b) hubSend(b, 'PING'); return;
@@ -1773,7 +1956,7 @@
       case 'hub-demo': ward.setDemo(!ward.demo); toast('ok', `Mode demo hub ${ward.demo ? 'nyala' : 'mati'}`, ward.demo ? `Waktu tahan alarm dipersingkat jadi ${CFG.holdDemo} dtk.` : 'Waktu tahan kembali sesuai aturan.'); break;
       case 'hub-cal-empty': if (b) hubSend(b, 'CAL_EMPTY'); return;
       case 'hub-cal-occ': if (b) hubSend(b, 'CAL_OCC'); return;
-      case 'hub-cal-reset': if (b) S.calib.set(b.id, { fresh: true }); break;
+      case 'hub-cal-reset': if (b) { S.calib.set(b.id, { fresh: true }); if (b.mon.serial) usbCalReset(b); } break;
       default: return;
     }
     render();
@@ -1845,6 +2028,7 @@
   /* ------------------------------------------------------------------ jalan */
   function render() {
     const t = ward.t;
+    usbTick();
     if (S.view === 'mulai') { renderStartSide(); const c = $('[data-v="clock"]', startEl); if (c) c.textContent = hm(new Date()); return; }
     if (S.view === 'ringkasan') { renderSummarySide(); return; }
     if (S.view === 'ponsel') { renderPhone(t); return; }
@@ -1880,6 +2064,13 @@
   setView(S.view);
   render();
 
+  if (SER && SER.supported) {                       /* sensor USB: sambung lagi otomatis ke port yang pernah diizinkan, juga saat ESP32 dicolok ulang */
+    const match = (p, sv) => { const i = p.getInfo ? p.getInfo() : {}; return sv.vid == null || (i.usbVendorId === sv.vid && i.usbProductId === sv.pid); };
+    const auto = p => { const sv = store.get('siagabed.usb', null); if (sv && ward.byId(sv.bed) && match(p, sv)) usbConnect(p, sv.bed, true); };
+    if (store.get('siagabed.usb', null)) navigator.serial.getPorts().then(ps => { const sv = store.get('siagabed.usb', null), p = sv && ps.find(x => match(x, sv)); if (p) auto(p); }).catch(() => {});
+    navigator.serial.addEventListener('connect', e => auto(e.target));
+  }
+
   let lastReal = performance.now(), acc = 0;
   setInterval(() => {
     const now = performance.now(), dt = Math.min(5, (now - lastReal) / 1000);
@@ -1898,5 +2089,5 @@
     soundTick();
   }, 40);
   setInterval(render, 250);
-  window.SiagaApp = { ward, state: S, render, stat, setView, tAtWall, demoTick, startDemo };   /* untuk uji dan konsol pengembang */
+  window.SiagaApp = { ward, state: S, render, stat, setView, tAtWall, demoTick, startDemo, usb, usbConnect, usbDisconnect };   /* untuk uji dan konsol pengembang */
 })();
