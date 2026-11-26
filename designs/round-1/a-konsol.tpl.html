@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>A · Konsol</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#090D12;--p1:#10161E;--p2:#151D27;--line:#222C38;--line2:#2E3A48;
+  --tx:#E9EEF3;--tx2:#A3B0BF;--tx3:#738294;
+  --hi:#FF4D4D;--hiDeep:#2E0C0E;--hiMid:#5A1418;
+  --md:#FFC226;--mdDeep:#251D06;
+  --lo:#5EC8FF;--loDeep:#0B2030;
+  --ok:#6CD49A;
+}
+body{width:1920px;height:1080px;background:var(--bg);color:var(--tx);font-family:'IBM Plex Sans',sans-serif;overflow:hidden;font-size:16px}
+.mono{font-family:'IBM Plex Mono',monospace}
+.cond{font-family:'IBM Plex Sans Condensed',sans-serif}
+
+/* bilah sistem */
+.bar{height:64px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--line);background:#0C1117;gap:28px}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;font-size:18px;letter-spacing:.01em}
+.brand small{display:block;color:var(--tx3);font-weight:500;font-size:13px;letter-spacing:.02em}
+.nav{display:flex;gap:4px;margin-left:16px}
+.nav a{color:var(--tx2);text-decoration:none;font-size:15px;font-weight:500;padding:8px 14px;border-radius:4px}
+.nav a.on{color:var(--tx);background:var(--p2);box-shadow:inset 0 -2px 0 var(--tx)}
+.sp{flex:1}
+.chips{display:flex;gap:8px;align-items:center}
+.chip{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--line2);border-radius:4px;font-size:14px;color:var(--tx2)}
+.chip b{color:var(--tx);font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.count{display:flex;align-items:baseline;gap:8px;padding:0 14px;height:40px;align-items:center;border-radius:4px;background:var(--loDeep);border:1px solid #1C4A66}
+.count .n{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--tx)}
+.count span{font-size:14px;color:var(--lo)}
+.clock{font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:500;letter-spacing:-.01em;padding-left:8px}
+
+main{padding:20px 28px 0}
+.sec{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}
+.sec h2{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx2);font-weight:600}
+.sec .meta{font-size:13px;color:var(--tx3)}
+
+/* item antrean */
+.q{display:grid;grid-template-columns:12px 210px 300px 1fr auto;align-items:stretch;background:var(--p1);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden;position:relative}
+.q .band{background:var(--c)}
+.q .tier{padding:18px 20px;display:flex;flex-direction:column;gap:8px;border-right:1px solid var(--line)}
+.tier .lbl{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;color:var(--c);display:flex;align-items:center;gap:10px}
+.tier .pri{font-size:13px;color:var(--tx3)}
+.q .who{padding:16px 22px;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;gap:4px}
+.who .bed{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:-.02em;line-height:1;white-space:nowrap}
+.who .pt{color:var(--tx2);font-size:16px}
+.q .why{padding:16px 24px;display:flex;align-items:center;gap:28px}
+.q .act{padding:16px 20px;display:flex;align-items:center;gap:10px}
+.btn{height:56px;padding:0 22px;border-radius:4px;font-family:'IBM Plex Sans',sans-serif;font-size:17px;font-weight:600;display:flex;align-items:center;gap:10px;border:1px solid var(--line2);color:var(--tx);background:var(--p2);white-space:nowrap}
+.btn.ghost{background:transparent;color:var(--tx2)}
+
+/* pra-alarm */
+.q.pra{--c:var(--hi);background:var(--hiDeep);border-color:var(--hiMid);grid-template-columns:12px 210px 330px 1fr auto;height:228px}
+.q.pra .tier,.q.pra .who{border-color:var(--hiMid)}
+.q.pra .who .bed{font-size:96px}
+.q.pra .who .pt{font-size:19px;color:#F1C9C9}
+.big{font-family:'IBM Plex Mono',monospace;font-size:84px;font-weight:600;line-height:.9;letter-spacing:-.03em}
+.big small{font-size:28px;font-weight:500;letter-spacing:0;margin-left:6px}
+.cap{font-size:17px;color:#F1C9C9;margin-top:8px}
+.trace{flex:1;min-width:300px;max-width:400px;position:relative;height:120px;border-left:1px solid var(--hiMid);padding-left:24px}
+.trace .tt{position:absolute;left:24px;top:-4px;font-size:12px;color:#C99A9A;font-family:'IBM Plex Mono',monospace;letter-spacing:.04em}
+.trace svg{position:absolute;left:24px;top:16px}
+.cd{display:flex;flex-direction:column;gap:6px;min-width:230px;padding-left:24px;border-left:1px solid var(--hiMid)}
+.cd .k{font-size:15px;color:#F1C9C9}
+.cd .v{font-family:'IBM Plex Mono',monospace;font-size:64px;font-weight:600;line-height:1}
+.cd .v small{font-size:24px;font-weight:500}
+.btn.call{height:88px;padding:0 30px;font-size:22px;background:var(--hi);border-color:var(--hi);color:#fff;font-weight:700}
+.btn.cancel{height:64px;background:transparent;border:1.5px dashed #A86A6A;color:#F1C9C9;font-size:17px}
+.btn.cancel em{font-style:normal;font-size:13px;color:#C99A9A;font-weight:500;border:1px solid #6B3A3A;border-radius:3px;padding:2px 6px}
+.q.pra .act{flex-direction:column;align-items:stretch;justify-content:center;gap:10px;padding:16px 24px}
+.drain{position:absolute;left:12px;right:0;bottom:0;height:6px;background:#3D1114}
+.drain i{display:block;height:100%;width:60%;background:var(--hi)}
+
+/* kritis */
+.q.kr{--c:var(--hi);height:116px}
+.q.kr .who .bed{font-size:52px}
+.rr{font-family:'IBM Plex Mono',monospace;font-size:44px;font-weight:600;line-height:1;color:var(--tx)}
+.rr small{font-size:18px;color:var(--tx2);font-weight:500;margin-left:4px}
+.rr .up{color:var(--hi);font-size:32px}
+.reason{font-size:17px;color:var(--tx2)}
+.reason b{color:var(--tx);font-weight:600}
+.btn.chk{background:var(--tx);color:#0B1016;border-color:var(--tx)}
+
+/* waspada & teknis */
+.q.ws{--c:var(--md);height:84px;background:#0E141B}
+.q.ws .who .bed,.q.tk .who .bed{font-size:36px}
+.q.ws .tier .lbl,.q.tk .tier .lbl{font-size:17px}
+.q.tk{--c:var(--lo);height:84px;background:#0E141B}
+.q.ws .tier,.q.tk .tier{padding:12px 20px;justify-content:center;gap:4px}
+.q.ws .who,.q.tk .who{padding:10px 22px;flex-direction:row;align-items:center;gap:16px}
+.q.ws .who .pt,.q.tk .who .pt{font-size:15px}
+.ack{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--tx2)}
+.ack .tick{color:var(--ok);font-family:'IBM Plex Mono',monospace}
+.q.ws .btn,.q.tk .btn{height:48px;font-size:16px}
+
+/* ringkasan bed */
+.rooms{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+.room{border:1px solid var(--line);border-radius:6px;background:#0C1118}
+.room h3{display:flex;justify-content:space-between;align-items:baseline;padding:10px 16px;border-bottom:1px solid var(--line);font-family:'IBM Plex Sans Condensed',sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);font-weight:600}
+.room h3 span{font-family:'IBM Plex Sans',sans-serif;text-transform:none;letter-spacing:0;font-weight:500;color:var(--tx3);font-size:13px}
+.ch{display:grid;grid-template-columns:repeat(4,1fr)}
+.c{padding:14px 16px 12px;border-right:1px solid var(--line);height:346px;display:flex;flex-direction:column;gap:6px;position:relative}
+.c:last-child{border-right:0}
+.c .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.c .top .st{font-size:12px;padding:3px 6px}
+.c .id{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;white-space:nowrap}
+.st{white-space:nowrap;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;font-family:'IBM Plex Sans Condensed',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px}
+.st.n{color:var(--tx3);padding-left:0}
+.st.hi{background:var(--hi);color:#fff}
+.st.kr{color:var(--hi);border:1px solid var(--hi)}
+.st.md{color:var(--md);border:1px solid #6A5512}
+.st.lo{color:var(--lo);border:1px dashed var(--lo)}
+.st.q{color:var(--tx2);border:1px solid var(--line2)}
+.c .pt{font-size:15px;color:var(--tx2);line-height:1.35;height:42px}
+.c .pt b{color:var(--tx);font-weight:600}
+.c .num{display:flex;align-items:baseline;gap:6px;margin-top:2px}
+.c .num .v{font-family:'IBM Plex Mono',monospace;font-size:56px;font-weight:600;line-height:1}
+.c .num .u{font-size:14px;color:var(--tx3)}
+.c svg{margin-top:auto}
+.c .age{white-space:nowrap;display:flex;justify-content:space-between;font-size:13px;color:var(--tx3);font-family:'IBM Plex Mono',monospace}
+.c.alarm{background:var(--hiDeep);box-shadow:inset 0 0 0 2px var(--hi)}
+.c.kr{box-shadow:inset 0 3px 0 var(--hi)}
+.c.ws{box-shadow:inset 0 3px 0 var(--md)}
+.c.off{background:repeating-linear-gradient(135deg,#0C1118 0 10px,#0F1620 10px 20px)}
+.c.empty .id{color:var(--tx3)}
+.nodata{margin-top:auto;height:72px;border:1px dashed #2F4A5E;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--lo);font-family:'IBM Plex Mono',monospace}
+.flat{margin-top:auto;height:72px;border-top:1px dashed var(--line2);display:flex;align-items:center;font-size:13px;color:var(--tx3)}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><rect x="1.5" y="1.5" width="27" height="27" rx="6" stroke="#E9EEF3" stroke-width="2"/><rect x="7" y="7" width="16" height="16" rx="3.5" stroke="#E9EEF3" stroke-width="2"/><rect x="12" y="12" width="6" height="6" rx="1.5" fill="#E9EEF3"/></svg>
+    <div>SiagaBed<small>Bangsal Melati · Lantai 3</small></div>
+  </div>
+  <nav class="nav"><a class="on">Bangsal</a><a>Log</a><a>Bantuan</a><a>Tim</a></nav>
+  <div class="sp"></div>
+  <div class="chips">
+    <div class="chip">Perawat jaga <b>Ns. Rina</b></div>
+    <div class="chip"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10l-4-3H2z" fill="#A3B0BF"/><path d="M11 5.5c1 .8 1 4.2 0 5M13 3.5c2 1.8 2 7.2 0 9" stroke="#A3B0BF" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg><b>Suara aktif</b></div>
+    <div class="chip"><span class="dot"></span><b>Live</b> · 8 hub · terhubung</div>
+    <div class="count"><span class="n">7/8</span><span>bed terpantau</span></div>
+  </div>
+  <div class="clock">10.53</div>
+</header>
+
+<main>
+  <div class="sec"><h2>Antrean tindakan · 4</h2><span class="meta">Urut paling genting. Item yang sedang disentuh tidak bergeser.</span></div>
+
+  <!-- 1 pra-alarm -->
+  <section class="q pra">
+    <div class="band"></div>
+    <div class="tier">
+      <div class="lbl"><svg width="26" height="26" viewBox="0 0 26 26"><path d="M8 1h10l7 7v10l-7 7H8l-7-7V8z" fill="#FF4D4D"/><rect x="11.5" y="6" width="3" height="9" fill="#2E0C0E"/><rect x="11.5" y="17.5" width="3" height="3" fill="#2E0C0E"/></svg>Pra-alarm</div>
+      <div class="pri">Prioritas tinggi · bunyi berulang</div>
+      <div class="pri" style="margin-top:auto">Mulai 10.53.07</div>
+    </div>
+    <div class="who">
+      <div class="bed">301-B</div>
+      <div class="pt">Ny. R.W. · 54 · Pascalaparotomi H+1</div>
+    </div>
+    <div class="why">
+      <div>
+        <div class="big">26<small>dtk</small></div>
+        <div class="cap">tanpa napas efektif</div>
+      </div>
+      <div class="trace">
+        <div class="tt">NAPAS · 30 DTK TERAKHIR</div>
+        <svg width="360" height="100" viewBox="0 0 360 100">
+          <line x1="48" y1="0" x2="48" y2="100" stroke="#C25A5E" stroke-dasharray="3 4"/>
+          <text x="56" y="96" fill="#C99A9A" font-family="IBM Plex Mono" font-size="11">napas efektif terakhir</text>
+          <path d="{{wave:14:26:360:100:0.8:3}}" stroke="#FF8A8A" stroke-width="2" fill="none" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="cd">
+        <div class="k">Code Blue otomatis dalam</div>
+        <div class="v">9<small> dtk</small></div>
+        <div class="k" style="color:#C99A9A;font-size:13px">Verifikasi perawat 15 dtk</div>
+      </div>
+    </div>
+    <div class="act">
+      <div class="btn call"><svg width="22" height="22" viewBox="0 0 22 22"><path d="M4 2h4l2 5-2.5 1.5a11 11 0 0 0 6 6L15 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2 4a2 2 0 0 1 2-2z" fill="#fff"/></svg>Panggil Code Blue sekarang</div>
+      <div class="btn cancel">Batalkan · pasien sudah dicek <em>tahan 2 dtk</em></div>
+    </div>
+    <div class="drain"><i></i></div>
+  </section>
+
+  <!-- 2 kritis -->
+  <section class="q kr">
+    <div class="band"></div>
+    <div class="tier">
+      <div class="lbl"><svg width="24" height="22" viewBox="0 0 24 22"><path d="M12 1l11 20H1z" fill="none" stroke="#FF4D4D" stroke-width="2.4" stroke-linejoin="round"/><rect x="10.8" y="8" width="2.4" height="6.5" fill="#FF4D4D"/><rect x="10.8" y="16" width="2.4" height="2.4" fill="#FF4D4D"/></svg>Kritis</div>
+      <div class="pri">Prioritas tinggi · bunyi sekali, tegas</div>
+    </div>
+    <div class="who">
+      <div class="bed">302-C</div>
+      <div class="pt">Ny. D.A. · 60 · PPOK eksaserbasi</div>
+    </div>
+    <div class="why">
+      <div class="rr">31<small>/mnt</small> <span class="up">↑</span></div>
+      <div class="reason"><b>RR ≥ 30 selama 1 mnt 20 dtk</b><br>Ambang Kritis 1 mnt</div>
+      <svg width="260" height="56" viewBox="0 0 260 56" style="margin-left:12px"><line x1="0" y1="18" x2="260" y2="18" stroke="#5A1418" stroke-dasharray="3 4"/><text x="0" y="12" fill="#738294" font-family="IBM Plex Mono" font-size="10">30</text><polyline points="0,44 26,42 52,40 78,38 104,34 130,30 156,24 182,18 208,14 234,12 260,10" fill="none" stroke="#FF4D4D" stroke-width="2"/><text x="0" y="55" fill="#738294" font-family="IBM Plex Mono" font-size="10">tren 10 mnt</text></svg>
+    </div>
+    <div class="act">
+      <div class="btn chk">Sudah dicek</div>
+      <div class="btn ghost">Lihat tren</div>
+    </div>
+  </section>
+
+  <!-- 3 waspada sudah dicek -->
+  <section class="q ws">
+    <div class="band"></div>
+    <div class="tier">
+      <div class="lbl"><svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#FFC226" stroke-width="2.4"/><rect x="8.8" y="5" width="2.4" height="6" fill="#FFC226"/><rect x="8.8" y="12.6" width="2.4" height="2.4" fill="#FFC226"/></svg>Waspada</div>
+      <div class="pri">Prioritas menengah · sudah dicek</div>
+    </div>
+    <div class="who"><div class="bed">301-C</div><div class="pt">Tn. A.M. · 72 · Gagal jantung</div></div>
+    <div class="why">
+      <div class="rr" style="font-size:32px">22<small>/mnt</small></div>
+      <div class="reason">RR &gt; 20 selama 2 mnt</div>
+      <div class="ack"><span class="tick">✓</span>Dicek Ns. Rina 10.42 · diterima hub</div>
+    </div>
+    <div class="act"><div class="btn ghost">Lihat tren</div></div>
+  </section>
+
+  <!-- 4 tidak terpantau -->
+  <section class="q tk">
+    <div class="band"></div>
+    <div class="tier">
+      <div class="lbl"><svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="2" fill="none" stroke="#5EC8FF" stroke-width="2" stroke-dasharray="4 3"/><path d="M5 15L15 5" stroke="#5EC8FF" stroke-width="2"/></svg>Tidak terpantau</div>
+      <div class="pri">Gangguan teknis</div>
+    </div>
+    <div class="who"><div class="bed">302-B</div><div class="pt">Tn. B.P. · 81 · Stroke iskemik</div></div>
+    <div class="why">
+      <div class="reason"><b>Pad terlepas sejak 10.51</b> · periksa konektor di bedhead</div>
+    </div>
+    <div class="act"><div class="btn">Buka detail</div></div>
+  </section>
+
+  <div class="rooms">
+    <div class="room">
+      <h3>Kamar 301 <span>4 bed · 3 terisi</span></h3>
+      <div class="ch">
+        <div class="c">
+          <div class="top"><span class="id">301-A</span><span class="st n">● Normal</span></div>
+          <div class="pt"><b>Tn. S.H.</b> · 67 · Pneumonia</div>
+          <div class="num"><span class="v">16</span><span class="u">/mnt</span></div>
+          <svg width="196" height="72" viewBox="0 0 196 72"><path d="{{wave:16:0:196:72:0.7:11}}" stroke="#6CD49A" stroke-width="1.6" fill="none"/></svg>
+          <div class="age"><span>sinyal baik</span><span>data 1 dtk</span></div>
+        </div>
+        <div class="c alarm">
+          <div class="top"><span class="id">301-B</span><span class="st hi">Pra-alarm</span></div>
+          <div class="pt"><b>Ny. R.W.</b> · 54 · Pascalaparotomi H+1</div>
+          <div class="num"><span class="v" style="color:#FF4D4D">26</span><span class="u">dtk tanpa napas</span></div>
+          <svg width="196" height="72" viewBox="0 0 196 72"><path d="{{wave:14:26:196:72:0.7:3}}" stroke="#FF8A8A" stroke-width="1.6" fill="none"/></svg>
+          <div class="age"><span style="color:#FF8A8A">Code Blue 9 dtk</span><span>data 1 dtk</span></div>
+        </div>
+        <div class="c ws">
+          <div class="top"><span class="id">301-C</span><span class="st md">○ Waspada</span></div>
+          <div class="pt"><b>Tn. A.M.</b> · 72 · Gagal jantung</div>
+          <div class="num"><span class="v">22</span><span class="u">/mnt</span></div>
+          <svg width="196" height="72" viewBox="0 0 196 72"><path d="{{wave:22:0:196:72:0.6:21}}" stroke="#FFC226" stroke-width="1.6" fill="none"/></svg>
+          <div class="age"><span>dicek 10.42</span><span>data 1 dtk</span></div>
+        </div>
+        <div class="c empty">
+          <div class="top"><span class="id">301-D</span><span class="st q">Bed kosong</span></div>
+          <div class="pt">Siap pakai · tanpa pasien</div>
+          <div class="num"><span class="v" style="color:#3A4656">—</span></div>
+          <div class="flat">Tidak dipantau</div>
+          <div class="age"><span>hub siaga</span><span></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="room">
+      <h3>Kamar 302 <span>4 bed · 4 terisi</span></h3>
+      <div class="ch">
+        <div class="c">
+          <div class="top"><span class="id">302-A</span><span class="st n">● Normal</span></div>
+          <div class="pt"><b>Ny. L.K.</b> · 45 · DM tipe 2, selulitis</div>
+          <div class="num"><span class="v">13</span><span class="u">/mnt</span></div>
+          <svg width="196" height="72" viewBox="0 0 196 72"><path d="{{wave:13:0:196:72:0.75:31}}" stroke="#6CD49A" stroke-width="1.6" fill="none"/></svg>
+          <div class="age"><span>sinyal baik</span><span>data 1 dtk</span></div>
+        </div>
+        <div class="c off">
+          <div class="top"><span class="id">302-B</span><span class="st lo">Tidak terpantau</span></div>
+          <div class="pt"><b>Tn. B.P.</b> · 81 · Stroke iskemik</div>
+          <div class="num"><span class="v" style="color:#3A4656">—</span><span class="u">/mnt</span></div>
+          <div class="nodata">Pad terlepas · 10.51</div>
+          <div class="age"><span style="color:#5EC8FF">tidak ada data</span><span>2 mnt</span></div>
+        </div>
+        <div class="c kr">
+          <div class="top"><span class="id">302-C</span><span class="st kr">△ Kritis</span></div>
+          <div class="pt"><b>Ny. D.A.</b> · 60 · PPOK eksaserbasi</div>
+          <div class="num"><span class="v">31</span><span class="u">/mnt ↑</span></div>
+          <svg width="196" height="72" viewBox="0 0 196 72"><path d="{{wave:31:0:196:72:0.5:41}}" stroke="#FF4D4D" stroke-width="1.6" fill="none"/></svg>
+          <div class="age"><span>1 mnt 20 dtk</span><span>data 1 dtk</span></div>
+        </div>
+        <div class="c">
+          <div class="top"><span class="id">302-D</span><span class="st q">Turun dari bed</span></div>
+          <div class="pt"><b>Tn. Y.T.</b> · 38 · DBD</div>
+          <div class="num"><span class="v" style="color:#3A4656">—</span><span class="u">/mnt</span></div>
+          <div class="flat">Pasien turun dari bed · 2 mnt</div>
+          <div class="age"><span>alarm ditahan</span><span>data 1 dtk</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>
