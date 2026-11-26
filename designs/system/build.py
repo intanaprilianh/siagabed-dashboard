@@ -294,6 +294,8 @@ def komponen():
 
 if __name__ == "__main__":
     (HERE / "tokens.css").write_text(tokens_css(), encoding="utf-8")
+    # Dasbor (aplikasi) memakai salinan yang sama: css/tokens.css di akar repo.
+    (HERE.parent.parent / "css" / "tokens.css").write_text(tokens_css(), encoding="utf-8")
     (HERE / "tokens.json").write_text(json.dumps(tokens_json(), ensure_ascii=False, indent=1), encoding="utf-8")
     (HERE / "fondasi.html").write_text(fondasi(), encoding="utf-8")
     (HERE / "komponen.html").write_text(komponen(), encoding="utf-8")

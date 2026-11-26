@@ -46,6 +46,9 @@
       this.present = true; this.fault = false; this.held = false; this.heldLong = false;
       this.praT = 0; this.praSince = 0; this.cbT = 0; this.cbSource = 'otomatis';
       this.dc = 0; this.delta = 1; this.lastF = 0; this.lastX = NaN; this.lowsqiSince = null;
+      this.sensor = null; this.hubFw = null;   /* dari topik status: "FAKE" = hub palsu (simulasi) */
+      this.faultCause = null;                  /* hub USB: "usb" (ESP32 diam) | "osc" (osilator) */
+      this.fwSt = null; this.sps = null;       /* hub USB: status firmware ESP32 dan laju sampel */
     }
     isOffline() { return !this.online || Date.now() - this.lastStWall > STALE_MS; }
     status() {
@@ -81,6 +84,8 @@
       this.rr = m.rr != null ? m.rr : null;
       this.apneaSec = m.ap || 0; this.sqi = m.sqi || 0; this.h = m.h || 6; this.demo = !!m.demo;
       this.lastF = m.dc || 0;
+      if (m.stage === 'fault') { if (m.fault_cause) this.faultCause = m.fault_cause; } else this.faultCause = null;
+      this.fwSt = m.fw_st || null; this.sps = m.sps != null ? m.sps : null;
       if (cal && cal.empty != null && cal.occ != null && cal.empty !== cal.occ) {
         this.lastX = Math.abs(this.lastF - cal.empty);
         this.dc = this.lastX; this.delta = Math.abs(cal.occ - cal.empty);
@@ -218,7 +223,7 @@
         this.apiOk = true;
         for (const row of beds) {
           const b = this.byKey.get(row.bed);
-          if (b) { b.mon.online = !!row.online; b.mon.known = true; }
+          if (b) { b.mon.online = !!row.online; b.mon.known = true; if (row.sensor) b.mon.sensor = row.sensor; if (row.fw) b.mon.hubFw = row.fw; }
         }
         for (const row of events.slice().reverse()) {
           const b = this.byKey.get(row.bed);
@@ -249,6 +254,9 @@
       if (kind === 'wave') { mon.onWave(m); return; }
       if (kind === 'status') {
         if (m.cal_empty != null && m.cal_occ != null) b.cal = { empty: m.cal_empty, occ: m.cal_occ };
+        else if (m.online && 'cal_empty' in m) b.cal = null;   /* kalibrasi dihapus di hub */
+        if (m.sensor) mon.sensor = m.sensor;
+        if (m.fw) mon.hubFw = m.fw;
         const online = !!m.online;
         if (mon.known && online !== mon.online) this.emitHub(b, online, m.ts || Date.now(), false);
         mon.online = online; mon.known = true;
@@ -292,8 +300,8 @@
         case 'CANCEL': mon.alarm = 'none'; x({ type: 'pra_batal' }); break;
         case 'RESUME': mon.alarm = 'none'; x({ type: 'pra_selesai' }); break;
         case 'RESET': mon.alarm = 'none'; x({ type: 'cb_selesai' }); break;
-        case 'FAULT': mon.fault = true; x({ type: 'teknis' }); break;
-        case 'FAULT_CLEAR': mon.fault = false; x({ type: 'teknis_pulih' }); break;
+        case 'FAULT': mon.fault = true; mon.faultCause = m.cause || null; x({ type: 'teknis' }); break;
+        case 'FAULT_CLEAR': mon.fault = false; mon.faultCause = null; x({ type: 'teknis_pulih' }); break;
         case 'TECH': mon.heldLong = true; x({ type: 'tahan_lama' }); break;
         case 'CAL_OK':
           b.cal = { empty: m.empty, occ: m.occ };
